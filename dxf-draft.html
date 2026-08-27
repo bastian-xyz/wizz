@@ -40,6 +40,8 @@
   .field input[type=number]{ width:52px; background:var(--bg); border:1px solid var(--border); color:var(--text);
     font-family:inherit; font-size:11px; padding:5px 6px; }
   .field input[type=checkbox]{ accent-color:var(--accent); cursor:pointer; }
+  .field.poly-measure{ gap:8px; padding-left:8px; border-left:1px solid var(--border); }
+  .field.poly-measure input[type=number]{ width:82px; }
   .toolbar-right{ margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
   button.action{ background:var(--bg); border:1px solid var(--border); color:var(--text-dim);
@@ -143,6 +145,7 @@
   .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 6px var(--accent); }
   footer .spacer{ flex:1; }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div id="app">
@@ -154,6 +157,11 @@
       <div class="field"><input type="checkbox" id="snapToggle" checked> GRILLA</div>
       <div class="field"><input type="checkbox" id="objSnapToggle" checked> PUNTOS</div>
       <div class="field">GRILLA <input type="number" id="gridSize" value="20" min="5" max="200" step="5"></div>
+      <div class="field poly-measure">
+        <span>POLI</span>
+        <input type="number" id="polyMeasureInput" value="0" min="0" step="0.1" title="Longitud del siguiente segmento de la polilínea">
+        <span>mm</span>
+      </div>
       <div class="field">
         ESCALA <input type="number" id="unitScale" value="1" min="0.0001" step="0.1">
         <div class="unit-presets">
@@ -263,6 +271,7 @@ const TOOLS = [
   {id:'text', label:'TEXTO'}
 ];
 const rail = document.getElementById('rail');
+const polyMeasureInput = document.getElementById('polyMeasureInput');
 TOOLS.forEach(t=>{
   if(t===null){ const s=document.createElement('div'); s.className='rail-sep'; rail.appendChild(s); return; }
   const b = document.createElement('button');
@@ -270,6 +279,20 @@ TOOLS.forEach(t=>{
   b.innerHTML = ICONS[t.id] + `<span class="rail-label">${t.label}</span>`;
   rail.appendChild(b);
 });
+
+function normalizePolylineMeasure(x, y) {
+  const measure = Number(polyMeasureInput.value);
+  if (!Number.isFinite(measure) || measure <= 0 || !draft || draft.type !== 'polyline' || draft.points.length === 0) return {x, y};
+
+  const last = draft.points[draft.points.length - 1];
+  const dx = x - last[0];
+  const dy = y - last[1];
+  const dist = Math.hypot(dx, dy);
+  if (dist < 1e-6) return {x: last[0] + measure, y: last[1]};
+
+  const scale = measure / dist;
+  return {x: last[0] + dx * scale, y: last[1] + dy * scale};
+}
 
 /* =========================================================
    FUENTE VECTORIAL INTEGRADA (trazo único, mayúsculas)
@@ -840,7 +863,10 @@ canvas.addEventListener('mousemove', e=>{
       if(draft.stage===1){ draft.r = Math.hypot(x-draft.cx, y-draft.cy); draft._prevAngle = Math.atan2(y-draft.cy, x-draft.cx); draft.type='arcdraft'; draft.preview={type:'circle',cx:draft.cx,cy:draft.cy,r:draft.r}; }
       else if(draft.stage===2){ draft.a2live = Math.atan2(y-draft.cy, x-draft.cx); draft.preview={type:'arc',cx:draft.cx,cy:draft.cy,r:draft.r,a1:draft.a1,a2:draft.a2live}; }
     }
-    else if(draft.type==='polyline'){ draft._preview=[x,y]; }
+    else if(draft.type==='polyline'){
+      const constrained = normalizePolylineMeasure(x, y);
+      draft._preview = [constrained.x, constrained.y];
+    }
     render();
     if(draft.preview) strokeShape(draft.preview, getCSS('--accent-dim'), 1);
   }
@@ -879,7 +905,8 @@ canvas.addEventListener('click', e=>{
   }
   if(tool==='polyline'){
     if(!draft) draft={type:'polyline', points:[], closed:false};
-    draft.points.push([x,y]); render(); return;
+    const constrained = normalizePolylineMeasure(x, y);
+    draft.points.push([constrained.x, constrained.y]); render(); return;
   }
   if(tool==='text'){ openTextPanel(e.clientX, e.clientY, x, y); return; }
 });

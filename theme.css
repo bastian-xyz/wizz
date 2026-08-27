@@ -63,6 +63,46 @@ body {
   background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px !important;
   background-attachment: fixed !important;
   font-family: 'Montserrat', sans-serif !important;
+  position: relative;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+}
+
+body::before {
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse at 50% 46%, transparent 35%, rgba(0,0,0,.65) 100%);
+}
+
+body::after {
+  top: -20px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  opacity: 0.7;
+  z-index: 3;
+  background: linear-gradient(90deg, transparent, rgba(156,163,175,.45), transparent);
+  animation: cid-scan 8s linear infinite;
+}
+
+@keyframes cid-scan {
+  0% { transform: translateY(-12px); opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { transform: translateY(100vh); opacity: 0.2; }
+}
+
+html, body {
+  min-height: 100%;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Limpiar gradientes sólidos de algunas herramientas para que se vea la malla */
@@ -71,13 +111,19 @@ body {
 }
 
 /* 4. EFECTO CRISTAL (GLASSMORPHISM) PARA PANELES */
-.card, .panel, .control-section, header,
+.card, .panel, .control-section,
 .sidebar, .footer, .hud-corner, #textPanel, #layersPanel,
 .score-card, .analysis-card, .big-line, .preview {
   background-color: var(--cid-panel) !important;
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
   border-color: var(--cid-border) !important;
+}
+
+header {
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* 5. TIPOGRAFÍA EN BOTONES Y TÍTULOS */

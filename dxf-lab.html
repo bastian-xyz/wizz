@@ -868,7 +868,7 @@ function genMandala(p){
       const angle = k*(360/p.n) + offset + jitterVal(rng)*p.jangle;
       const ringRj = ringR + jitterVal(rng)*p.jrad;
       const sizeJ = 1 + jitterVal(rng)*(p.jsize/100);
-      const L = baseL * sizeJ;
+      const L = collisionSafeSize(baseL * sizeJ, ringGap * 0.7, 0.7);
       const W = L * (p.aspect/100);
 
       if(p.motif==='linea'){
@@ -927,7 +927,7 @@ function genBiombo(p){
         if(p.skip>0 && rng()*100 < p.skip) continue;
         const jx = cx + jitterVal(rng)*p.jpos;
         const jy = cy + jitterVal(rng)*p.jpos;
-        const rr = rr0 * (1 + jitterVal(rng)*(p.jsize/100));
+        const rr = collisionSafeSize(rr0 * (1 + jitterVal(rng)*(p.jsize/100)), Math.max(1, p.cell*0.7), 0.7);
         ents.push({type:'poly',layer:'CORTE',pts:polygonPoints(p.type,Math.max(1,rr)*2,jx,jy),closed:true});
       }
     }
@@ -938,7 +938,7 @@ function genBiombo(p){
     for(let cy=y0+rowPitch/2; cy<=y1-rowPitch/2; cy+=rowPitch, row++){
       if(p.skip>0 && rng()*100 < p.skip) continue;
       const rowY = cy + jitterVal(rng)*p.jpos;
-      const slotW = Math.max(1.5, baseSlotW * (1 + jitterVal(rng)*(p.jsize/100)));
+      const slotW = Math.max(1.5, collisionSafeSize(baseSlotW * (1 + jitterVal(rng)*(p.jsize/100)), Math.max(1, rowPitch*0.7), 0.7));
       const phase = (row%2===1) ? Math.PI : 0;
       const top=[], bottom=[];
       const steps = Math.max(8, Math.round((x1-x0)/6));
@@ -976,7 +976,7 @@ function genPerforado(p){
       if(p.skip>0 && rng()*100 < p.skip) continue;
       const jx = cx + jitterVal(rng)*p.jpos;
       const jy = cy + jitterVal(rng)*p.jpos;
-      const size = Math.max(0.3, p.size * (1 + jitterVal(rng)*(p.jsize/100)));
+      const size = Math.max(0.3, collisionSafeSize(p.size * (1 + jitterVal(rng)*(p.jsize/100)), Math.max(1, p.pitch*0.7), 0.7));
       if(p.shape==='circle'){
         ents.push({type:'circle',layer:'CORTE',cx:jx,cy:jy,r:size/2});
       } else {
@@ -1021,6 +1021,7 @@ function genGradiente(p){
       t = Math.pow(t, p.gamma);
       let size = p.min + t*(p.max-p.min);
       size *= (1 + jitterVal(rng)*(p.jsize/100));
+      size = Math.max(0.3, collisionSafeSize(size, Math.max(1, p.pitch*0.7), 0.7));
       const jx = cx + jitterVal(rng)*p.jpos;
       const jy = cy + jitterVal(rng)*p.jpos;
       if(size < 0.3) continue;
@@ -1118,6 +1119,7 @@ function genImagen(p){
         size = p.min + t*(p.max-p.min);
       }
       size *= (1 + jitterVal(rng)*(p.jsize/100));
+      size = Math.max(0.25, collisionSafeSize(size, Math.max(1, p.pitch*0.7), 0.7));
       const jx = cx + jitterVal(rng)*p.jpos;
       const jy = cy + jitterVal(rng)*p.jpos;
       if(size < 0.25) continue;
@@ -1514,6 +1516,12 @@ function bindRange(id, decimals=0){
 }
 
 let activeTab = 'mandala';
+
+function clamp(v, min, max){ return Math.min(max, Math.max(min, v)); }
+function collisionSafeSize(size, minPitch, safety = 0.78){
+  const maxAllowed = Math.max(0.1, minPitch * safety);
+  return Math.min(size, maxAllowed);
+}
 
 function readMandalaParams(){
   return {
