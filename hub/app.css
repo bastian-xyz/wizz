@@ -81,14 +81,63 @@ h1.sec-title em { font-style:normal; color:var(--cid-petroleo-br); }
   -webkit-mask-image:linear-gradient(to bottom, #000 0%, #000 38%, rgba(0,0,0,.45) 66%, transparent 100%);
           mask-image:linear-gradient(to bottom, #000 0%, #000 38%, rgba(0,0,0,.45) 66%, transparent 100%);
 }
-.mc-glyph svg { width:100%; height:100%; display:block; }
-.mc-glyph .spin { transform-origin:center; transform-box:fill-box; animation:mc-spin 28s linear infinite; }
-@keyframes mc-spin { to { transform:rotate(360deg); } }
+.mc-glyph svg { width:100%; height:100%; display:block; animation:mc-flicker 9s linear infinite; }
+
+/* Todo lo animado rota/escala sobre su propio centro */
+.mc-glyph .spin, .mc-glyph .spin-rev, .mc-glyph .bar, .mc-glyph .bob,
+.mc-glyph .pulse, .mc-glyph .sonar, .mc-glyph .core, .mc-glyph .scan, .mc-glyph .pt {
+  transform-box:fill-box; transform-origin:center; animation-delay:var(--d, 0s);
+}
+
+.mc-glyph .spin     { animation:mc-spin 28s linear infinite; }
+.mc-glyph .spin-rev { animation:mc-spin-rev 19s linear infinite; }
+.mc-glyph .scan     { animation:mc-scan 5.5s ease-in-out infinite; }
+.mc-glyph .pt       { animation:mc-drift 4.6s ease-in-out infinite; }
+.mc-glyph .bar      { transform-origin:center bottom; animation:mc-bar 3.4s ease-in-out infinite; }
+.mc-glyph .bob      { animation:mc-bob 4.2s ease-in-out infinite; }
+.mc-glyph .pulse    { animation:mc-pulse 3.6s ease-in-out infinite; }
+.mc-glyph .blink    { animation:mc-blink 2.8s ease-in-out infinite; animation-delay:var(--d, 0s); }
+.mc-glyph .sonar    { animation:mc-sonar 4s ease-out infinite; }
+.mc-glyph .core     { animation:mc-core 2.4s ease-in-out infinite; }
+
+/* Trazador que recorre el contorno (--len = largo del trazo) */
+.mc-glyph .tracer {
+  stroke-dashoffset:var(--len, 140); opacity:.85;
+  animation:mc-trace 3.8s linear infinite; animation-delay:var(--d, 0s);
+}
+
+@keyframes mc-spin     { to { transform:rotate(360deg); } }
+@keyframes mc-spin-rev { to { transform:rotate(-360deg); } }
+@keyframes mc-trace    { to { stroke-dashoffset:0; } }
+@keyframes mc-scan {
+  0%   { transform:translateY(-18px); opacity:0; }
+  12%  { opacity:.6; }
+  80%  { opacity:.3; }
+  100% { transform:translateY(92px); opacity:0; }
+}
+@keyframes mc-drift {
+  0%   { opacity:0; transform:translateY(-5px); }
+  22%  { opacity:var(--o, .5); }
+  66%  { opacity:var(--o, .5); }
+  100% { opacity:0; transform:translateY(13px); }
+}
+@keyframes mc-bar   { 0%,100% { transform:scaleY(.4); }  50% { transform:scaleY(1); } }
+@keyframes mc-bob   { 0%,100% { transform:translateY(2.5px); } 50% { transform:translateY(-2.5px); } }
+@keyframes mc-pulse { 0%,100% { transform:scale(.94); opacity:.35; } 50% { transform:scale(1.06); opacity:.62; } }
+@keyframes mc-blink { 0%,100% { opacity:.25; } 50% { opacity:.9; } }
+@keyframes mc-sonar { 0% { transform:scale(.55); opacity:0; } 18% { opacity:.4; } 100% { transform:scale(1.45); opacity:0; } }
+@keyframes mc-core  { 0%,100% { transform:scale(.8); opacity:.65; } 50% { transform:scale(1.25); opacity:1; } }
+@keyframes mc-flicker {
+  0%,92%,100% { opacity:1; }
+  93% { opacity:.42; } 94.5% { opacity:.95; } 96% { opacity:.6; } 97% { opacity:1; }
+}
 
 .menu-card:hover .mc-glyph { opacity:.85; transform:translateY(-2px) scale(1.04); }
+.menu-card:hover .mc-glyph .tracer { animation-duration:1.5s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .mc-glyph .spin { animation:none; }
+  .mc-glyph svg, .mc-glyph svg * { animation:none !important; }
+  .mc-glyph .tracer { opacity:.5; }
   .menu-card:hover .mc-glyph { transform:none; }
 }
 
