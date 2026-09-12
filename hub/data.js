@@ -7,10 +7,10 @@
 const DB = {
 
   /* ---------------------------------------------------------
-     ITEMS - acá vas agregando lo que sea (piezas, ideas, encargos)
+     PEDIDOS - acá vas agregando los encargos
      --------------------------------------------------------- */
-  items: [
-    { id: "IT-001", nombre: "Ejemplo de ítem", categoria: "General", estado: "pendiente", nota: "Borrá este y agregá los tuyos." }
+  pedidos: [
+    { id: "PD-001", nombre: "Ejemplo de pedido", categoria: "General", estado: "pendiente", nota: "Borrá este y agregá los tuyos." }
   ],
 
   /* ---------------------------------------------------------

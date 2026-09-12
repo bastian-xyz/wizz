@@ -4,8 +4,8 @@
 
 const PAGES = [
   { id: "menu",    href: "index.html",   label: "Menú" },
-  { id: "stats",   href: "stats.html",   label: "Stats" },
-  { id: "items",   href: "items.html",   label: "Ítems" },
+  { id: "status",  href: "status.html",  label: "Status" },
+  { id: "pedidos", href: "pedidos.html", label: "Pedidos" },
   { id: "toolbox", href: "toolbox.html", label: "Toolbox" },
   { id: "quest",   href: "quest.html",   label: "Quest" }
 ];
@@ -18,7 +18,7 @@ const PAGES = [
 const GLYPHS = {
 
   /* Anillo de telemetría + barras */
-  stats: `<svg viewBox="0 0 120 120" fill="none" stroke="currentColor"
+  status: `<svg viewBox="0 0 120 120" fill="none" stroke="currentColor"
       stroke-width="1.2" stroke-linecap="round" aria-hidden="true">
     <circle class="spin" cx="60" cy="44" r="40" opacity=".22" stroke-dasharray="3 7"/>
     <circle class="spin-rev" cx="60" cy="44" r="31" opacity=".4" stroke-dasharray="20 12"/>
@@ -45,7 +45,7 @@ const GLYPHS = {
   </svg>`,
 
   /* Cubos isométricos apilados */
-  items: `<svg viewBox="0 0 120 120" fill="none" stroke="currentColor"
+  pedidos: `<svg viewBox="0 0 120 120" fill="none" stroke="currentColor"
       stroke-width="1.2" stroke-linejoin="round" aria-hidden="true">
     <g opacity=".9">
       <path d="M60 22 75.6 31 60 40 44.4 31Z"/>
@@ -132,6 +132,10 @@ function esc(v) {
 function badge(estado) {
   const e = String(estado || "pendiente").toLowerCase();
   return `<span class="badge ${esc(e)}">${esc(e)}</span>`;
+}
+
+function plural(n, sing, plur) {
+  return n + " " + (n === 1 ? sing : plur);
 }
 
 function prio(p) {

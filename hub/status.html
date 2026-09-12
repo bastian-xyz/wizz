@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stats · HUB</title>
+<title>Status · HUB</title>
 <link rel="stylesheet" href="theme.css">
 <link rel="stylesheet" href="app.css">
 </head>
@@ -14,16 +14,16 @@
 <script src="data.js"></script>
 <script src="app.js"></script>
 <script>
-mountChrome("stats");
+mountChrome("status");
 
-const todo = [...DB.items, ...DB.toolbox, ...DB.quests];
+const todo = [...DB.pedidos, ...DB.toolbox, ...DB.quests];
 const est  = porEstado(todo);
 const listos = est.listo || 0;
 const avance = todo.length ? Math.round(listos / todo.length * 100) : 0;
 
 const tiles = [
-  { l: "Total registros", v: todo.length,        f: "ítems + toolbox + quests" },
-  { l: "Ítems",           v: DB.items.length,    f: "en el cajón" },
+  { l: "Total registros", v: todo.length,        f: "pedidos + toolbox + quests" },
+  { l: "Pedidos",         v: DB.pedidos.length,  f: "encargos" },
   { l: "Toolbox",         v: DB.toolbox.length,  f: "integradas" },
   { l: "Quests",          v: DB.quests.length,   f: "objetivos" },
   { l: "Avance",          v: avance + "%",       f: listos + " listos de " + todo.length, accent: true }
@@ -43,7 +43,7 @@ const barras = ordenEstados.filter(e => est[e]).map(e => {
 }).join("");
 
 const porModulo = [
-  { nombre: "Ítems",   lista: DB.items },
+  { nombre: "Pedidos", lista: DB.pedidos },
   { nombre: "Toolbox", lista: DB.toolbox },
   { nombre: "Quest",   lista: DB.quests }
 ].map(m => {
@@ -59,7 +59,7 @@ const porModulo = [
 }).join("");
 
 document.getElementById("app").innerHTML =
-  secHead("Módulo 01", "<em>Stats</em>", "Resumen con todo. Se recalcula solo cuando editás data.js.") +
+  secHead("Módulo 01", "<em>Status</em>", "Resumen con todo. Se recalcula solo cuando editás data.js.") +
   `<div class="stat-grid">` + tiles.map(t => `
     <div class="stat">
       <div class="stat-label">${esc(t.l)}</div>

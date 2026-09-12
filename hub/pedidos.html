@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ítems · HUB</title>
+<title>Pedidos · HUB</title>
 <link rel="stylesheet" href="theme.css">
 <link rel="stylesheet" href="app.css">
 </head>
@@ -14,17 +14,17 @@
 <script src="data.js"></script>
 <script src="app.js"></script>
 <script>
-mountChrome("items");
+mountChrome("pedidos");
 
 document.getElementById("app").innerHTML =
-  secHead("Módulo 02", "<em>Ítems</em>", "Todo lo que vayas agregando. Se edita en data.js → DB.items") +
-  tabla(DB.items, [
+  secHead("Módulo 02", "<em>Pedidos</em>", "Los encargos. Se editan en data.js → DB.pedidos") +
+  tabla(DB.pedidos, [
     { key: "id",        label: "ID",        cls: "id" },
-    { key: "nombre",    label: "Nombre",    cls: "nombre" },
+    { key: "nombre",    label: "Pedido",    cls: "nombre" },
     { key: "categoria", label: "Categoría" },
     { key: "estado",    label: "Estado",    render: r => badge(r.estado) },
     { key: "nota",      label: "Nota",      cls: "nota" }
-  ], "Todavía no hay ítems. Agregalos en data.js.");
+  ], "Todavía no hay pedidos. Agregalos en data.js.");
 </script>
 
 </body>
