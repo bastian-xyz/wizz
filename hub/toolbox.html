@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toolbox · HUB</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<main class="shell" id="app"></main>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+mountChrome("toolbox");
+
+document.getElementById("app").innerHTML =
+  secHead("Módulo 03", "<em>Toolbox</em>", "Lo que ya tenemos integrado y funcionando.") +
+  tabla(DB.toolbox, [
+    { key: "id",      label: "ID",     cls: "id" },
+    { key: "nombre",  label: "Herramienta", cls: "nombre",
+      render: r => r.archivo
+        ? `<a href="${esc(r.archivo)}">${esc(r.nombre)}</a>`
+        : esc(r.nombre) },
+    { key: "desc",    label: "Descripción", cls: "nota" },
+    { key: "estado",  label: "Estado", render: r => badge(r.estado) }
+  ], "Todavía no hay herramientas cargadas.");
+</script>
+
+</body>
+</html>

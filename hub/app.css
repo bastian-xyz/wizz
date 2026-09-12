@@ -1,0 +1,155 @@
+/* =========================================================
+   app.css - ESTILOS DEL HUB (sobre theme.css)
+   ========================================================= */
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body { width:100%; min-height:100%; }
+body {
+  font-family:'Montserrat', sans-serif;
+  color: var(--cid-blanco);
+  padding: 0 0 60px;
+}
+
+/* --- HUD esquinas --- */
+.hud { position:fixed; width:26px; height:26px; z-index:6; pointer-events:none;
+       border-color:rgba(156,163,175,.35); border-style:solid; }
+.hud.tl { top:16px; left:16px;  border-width:1.5px 0 0 1.5px; }
+.hud.tr { top:16px; right:16px; border-width:1.5px 1.5px 0 0; }
+.hud.bl { bottom:16px; left:16px;  border-width:0 0 1.5px 1.5px; }
+.hud.br { bottom:16px; right:16px; border-width:0 1.5px 1.5px 0; }
+
+/* --- Layout --- */
+.shell { max-width:1180px; width:100%; margin:0 auto; padding:0 24px; }
+
+header.top {
+  display:flex; justify-content:space-between; align-items:flex-end;
+  flex-wrap:wrap; gap:16px; padding:46px 0 22px;
+  border-bottom:1px solid var(--cid-border); margin-bottom:30px;
+}
+.brand { font-size:clamp(.95rem,1.8vw,1.2rem); font-weight:800; letter-spacing:.5px; }
+.brand span { color:var(--cid-plata); font-weight:300; }
+.brand-sub {
+  font-size:.56rem; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+  color:rgba(156,163,175,.55); margin-top:6px; display:flex; align-items:center; gap:10px;
+}
+.brand-sub::before { content:''; width:26px; height:1px; background:rgba(156,163,175,.35); }
+
+/* --- Nav --- */
+nav.tabs { display:flex; gap:6px; flex-wrap:wrap; }
+nav.tabs a {
+  text-decoration:none; color:rgba(156,163,175,.75);
+  font-size:.6rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase;
+  padding:10px 18px; border:1px solid var(--cid-border); border-radius:3px;
+  background:rgba(15,76,92,.10); transition:all .25s ease;
+}
+nav.tabs a:hover { color:var(--cid-blanco); border-color:rgba(156,163,175,.5); background:rgba(15,76,92,.30); }
+nav.tabs a.active { color:var(--cid-blanco); border-color:var(--cid-petroleo-br); background:rgba(15,76,92,.45); }
+
+/* --- Títulos de sección --- */
+.sec-head { margin-bottom:22px; }
+.sec-ref {
+  font-size:.56rem; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+  color:rgba(156,163,175,.55); display:flex; align-items:center; gap:10px; margin-bottom:10px;
+}
+.sec-ref::before, .sec-ref::after { content:''; width:28px; height:1px; background:rgba(156,163,175,.35); }
+.sec-ref::after { flex:1; width:auto; }
+h1.sec-title { font-size:clamp(1.3rem,3vw,1.9rem); font-weight:900; letter-spacing:1px; }
+h1.sec-title em { font-style:normal; color:var(--cid-petroleo-br); }
+.sec-desc { margin-top:8px; font-size:.72rem; color:rgba(156,163,175,.7); letter-spacing:.4px; }
+
+/* --- Menú principal (tarjetas) --- */
+.menu-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px; }
+.menu-card {
+  display:block; text-decoration:none; color:inherit; position:relative;
+  background:var(--cid-panel); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--cid-border); border-radius:5px; padding:30px 26px 26px;
+  transition:all .3s ease; overflow:hidden; min-height:186px;
+}
+.menu-card::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background:var(--cid-petroleo-br); transform:scaleY(0); transform-origin:top; transition:transform .3s ease;
+}
+.menu-card:hover { border-color:rgba(156,163,175,.5); transform:translateY(-3px); background:rgba(15,76,92,.28); }
+.menu-card:hover::before { transform:scaleY(1); }
+.mc-num { font-size:.54rem; font-weight:700; letter-spacing:3px; color:rgba(156,163,175,.5); }
+.mc-title { font-size:1.15rem; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin:14px 0 10px; }
+.mc-desc { font-size:.72rem; color:rgba(156,163,175,.72); line-height:1.6; }
+.mc-count {
+  position:absolute; right:22px; bottom:20px;
+  font-size:.58rem; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:var(--cid-petroleo-br);
+}
+
+/* --- Paneles / tablas --- */
+.panel {
+  background:var(--cid-panel); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--cid-border); border-radius:5px; padding:22px; margin-bottom:18px;
+}
+.panel-title {
+  font-size:.58rem; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+  color:rgba(156,163,175,.6); margin-bottom:16px;
+}
+
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; min-width:560px; }
+th {
+  text-align:left; font-size:.55rem; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+  color:rgba(156,163,175,.6); padding:0 14px 12px; border-bottom:1px solid var(--cid-border); white-space:nowrap;
+}
+td { padding:14px; font-size:.8rem; border-bottom:1px solid rgba(156,163,175,.08); vertical-align:top; }
+tbody tr { transition:background .2s ease; }
+tbody tr:hover { background:rgba(15,76,92,.18); }
+td.id { font-size:.66rem; font-weight:700; letter-spacing:1.5px; color:rgba(156,163,175,.6); white-space:nowrap; }
+td.nombre { font-weight:600; }
+td.nota { color:rgba(156,163,175,.7); font-size:.72rem; }
+td a { color:var(--cid-petroleo-br); text-decoration:none; font-weight:600; }
+td a:hover { text-decoration:underline; }
+
+/* --- Badges de estado --- */
+.badge {
+  display:inline-block; font-size:.52rem; font-weight:700; letter-spacing:1.8px; text-transform:uppercase;
+  padding:5px 11px; border-radius:3px; border:1px solid; white-space:nowrap;
+}
+.badge.listo     { color:#6ee7b7; border-color:rgba(110,231,183,.35); background:rgba(110,231,183,.10); }
+.badge.activo    { color:#7dd3fc; border-color:rgba(125,211,252,.35); background:rgba(125,211,252,.10); }
+.badge.pendiente { color:#fcd34d; border-color:rgba(252,211,77,.32);  background:rgba(252,211,77,.10); }
+.badge.pausado   { color:#9CA3AF; border-color:rgba(156,163,175,.30); background:rgba(156,163,175,.08); }
+
+.prio { font-size:.58rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+.prio.alta  { color:#f87171; }
+.prio.media { color:#fcd34d; }
+.prio.baja  { color:rgba(156,163,175,.7); }
+
+/* --- Stats --- */
+.stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-bottom:26px; }
+.stat {
+  background:var(--cid-panel); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border:1px solid var(--cid-border); border-radius:5px; padding:22px 20px;
+}
+.stat-label { font-size:.54rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:rgba(156,163,175,.6); }
+.stat-value { font-size:2.4rem; font-weight:900; line-height:1.1; margin-top:10px; }
+.stat-value.accent { color:var(--cid-petroleo-br); }
+.stat-foot { font-size:.6rem; color:rgba(156,163,175,.55); margin-top:6px; letter-spacing:.5px; }
+
+.bar-row { margin-bottom:16px; }
+.bar-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; }
+.bar-name { font-size:.62rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:rgba(156,163,175,.8); }
+.bar-val { font-size:.66rem; font-weight:700; color:var(--cid-blanco); }
+.bar-track { height:6px; background:rgba(156,163,175,.12); border-radius:3px; overflow:hidden; }
+.bar-fill { height:100%; background:linear-gradient(90deg,var(--cid-petroleo),var(--cid-petroleo-br)); border-radius:3px; transition:width .6s ease; }
+
+.empty { padding:30px; text-align:center; font-size:.72rem; color:rgba(156,163,175,.5); letter-spacing:1px; }
+
+footer.bot {
+  max-width:1180px; margin:46px auto 0; padding:20px 24px 0;
+  border-top:1px solid var(--cid-border);
+  font-size:.55rem; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+  color:rgba(156,163,175,.4); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+}
+
+@media (max-width:640px) {
+  header.top { padding:32px 0 18px; }
+  .shell { padding:0 16px; }
+  nav.tabs a { padding:9px 13px; letter-spacing:1.8px; }
+}
