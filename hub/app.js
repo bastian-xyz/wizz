@@ -10,6 +10,101 @@ const PAGES = [
   { id: "quest",   href: "quest.html",   label: "Quest" }
 ];
 
+/* =========================================================
+   GLIFOS - assets vectoriales por módulo.
+   Se dibujan en la esquina superior derecha de cada botón y
+   se disuelven hacia abajo (ver .mc-glyph en app.css).
+   ========================================================= */
+const GLYPHS = {
+
+  /* Anillo de telemetría + barras */
+  stats: `<svg viewBox="0 0 120 120" fill="none" stroke="currentColor"
+      stroke-width="1.2" stroke-linecap="round" aria-hidden="true">
+    <circle class="spin" cx="60" cy="44" r="40" opacity=".22" stroke-dasharray="3 7"/>
+    <circle cx="60" cy="44" r="31" opacity=".4"/>
+    <circle cx="60" cy="44" r="21" opacity=".26"/>
+    <g opacity=".55"><path d="M60 2v7M60 79v7M18 44h7M95 44h7"/></g>
+    <g stroke-width="2.3" opacity=".9">
+      <path d="M48 56V46"/><path d="M55 56V38"/><path d="M62 56V42"/><path d="M69 56V32"/>
+    </g>
+    <path d="M42 60h36" opacity=".45"/>
+    <g fill="currentColor" stroke="none">
+      <rect x="40" y="68" width="3" height="3" opacity=".55"/>
+      <rect x="56" y="74" width="2.5" height="2.5" opacity=".45"/>
+      <rect x="72" y="70" width="3" height="3" opacity=".5"/>
+      <rect x="48" y="84" width="2" height="2" opacity=".4"/>
+      <rect x="66" y="90" width="2.5" height="2.5" opacity=".35"/>
+      <rect x="82" y="80" width="2" height="2" opacity=".3"/>
+    </g>
+  </svg>`,
+
+  /* Cubos isométricos apilados */
+  items: `<svg viewBox="0 0 120 120" fill="none" stroke="currentColor"
+      stroke-width="1.2" stroke-linejoin="round" aria-hidden="true">
+    <g opacity=".9">
+      <path d="M60 22 75.6 31 60 40 44.4 31Z"/>
+      <path d="M44.4 31v18L60 58V40"/>
+      <path d="M75.6 31v18L60 58"/>
+    </g>
+    <g opacity=".38">
+      <path d="M32 43 39.8 47.5 32 52 24.2 47.5Z"/>
+      <path d="M24.2 47.5v9L32 61v-9"/>
+      <path d="M39.8 47.5v9L32 61"/>
+    </g>
+    <g opacity=".38">
+      <path d="M88 43 95.8 47.5 88 52 80.2 47.5Z"/>
+      <path d="M80.2 47.5v9L88 61v-9"/>
+      <path d="M95.8 47.5v9L88 61"/>
+    </g>
+    <path d="M20 68h80" opacity=".28" stroke-dasharray="2 6"/>
+    <g fill="currentColor" stroke="none">
+      <rect x="44" y="74" width="3" height="3" opacity=".5"/>
+      <rect x="62" y="78" width="2.5" height="2.5" opacity=".45"/>
+      <rect x="34" y="86" width="2" height="2" opacity=".35"/>
+      <rect x="76" y="84" width="2.5" height="2.5" opacity=".4"/>
+      <rect x="56" y="94" width="2" height="2" opacity=".3"/>
+    </g>
+  </svg>`,
+
+  /* Retícula hexagonal modular */
+  toolbox: `<svg viewBox="0 0 120 120" fill="none" stroke="currentColor"
+      stroke-width="1.2" stroke-linejoin="round" aria-hidden="true">
+    <path d="M84 44 72 64.8 48 64.8 36 44 48 23.2 72 23.2Z" opacity=".85"/>
+    <path d="M73 44 66.5 55.3 53.5 55.3 47 44 53.5 32.7 66.5 32.7Z" opacity=".42"/>
+    <g opacity=".5"><path d="M60 23.2V12M36 44H23M84 44h13M60 64.8V76"/></g>
+    <g fill="currentColor" stroke="none" opacity=".65">
+      <circle cx="60" cy="9" r="2.6"/><circle cx="20" cy="44" r="2.6"/><circle cx="100" cy="44" r="2.6"/>
+    </g>
+    <g stroke-width="1.6" opacity=".75"><path d="M53.5 44h13M60 37.5v13"/></g>
+    <g fill="currentColor" stroke="none">
+      <rect x="42" y="80" width="3" height="3" opacity=".5"/>
+      <rect x="60" y="84" width="2.5" height="2.5" opacity=".42"/>
+      <rect x="74" y="78" width="2" height="2" opacity=".38"/>
+      <rect x="50" y="94" width="2" height="2" opacity=".3"/>
+      <rect x="68" y="98" width="2.5" height="2.5" opacity=".26"/>
+    </g>
+  </svg>`,
+
+  /* Baliza de sincronización */
+  quest: `<svg viewBox="0 0 120 120" fill="none" stroke="currentColor"
+      stroke-width="1.2" stroke-linejoin="round" aria-hidden="true">
+    <circle class="spin" cx="60" cy="42" r="46" opacity=".16" stroke-dasharray="2 11"/>
+    <circle cx="60" cy="42" r="36" opacity=".26" stroke-dasharray="4 9"/>
+    <path d="M60 12 80 42 60 72 40 42Z" opacity=".9"/>
+    <path d="M60 28 70 42 60 56 50 42Z" opacity=".48"/>
+    <circle cx="60" cy="42" r="3.6" fill="currentColor" stroke="none" opacity=".9"/>
+    <path d="M60 72v16" opacity=".45" stroke-dasharray="3 5"/>
+    <g fill="currentColor" stroke="none">
+      <rect x="46" y="76" width="3" height="3" opacity=".5"/>
+      <rect x="70" y="80" width="2.5" height="2.5" opacity=".45"/>
+      <rect x="38" y="88" width="2" height="2" opacity=".35"/>
+      <rect x="78" y="92" width="2" height="2" opacity=".3"/>
+      <rect x="58" y="98" width="2.5" height="2.5" opacity=".26"/>
+    </g>
+  </svg>`
+
+};
+
 function esc(v) {
   return String(v ?? "").replace(/[&<>"']/g, c => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
