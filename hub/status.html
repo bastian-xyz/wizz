@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Status · HUB</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<main class="shell" id="app"></main>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+mountChrome("status");
+
+const todo = [...DB.pedidos, ...DB.toolbox, ...DB.quests];
+const est  = porEstado(todo);
+const listos = est.listo || 0;
+const avance = todo.length ? Math.round(listos / todo.length * 100) : 0;
+
+const tiles = [
+  { l: "Total registros", v: todo.length,        f: "pedidos + toolbox + quests" },
+  { l: "Pedidos",         v: DB.pedidos.length,  f: "encargos" },
+  { l: "Toolbox",         v: DB.toolbox.length,  f: "integradas" },
+  { l: "Quests",          v: DB.quests.length,   f: "objetivos" },
+  { l: "Avance",          v: avance + "%",       f: listos + " listos de " + todo.length, accent: true }
+];
+
+const ordenEstados = ["listo", "activo", "pendiente", "pausado"];
+const barras = ordenEstados.filter(e => est[e]).map(e => {
+  const pct = Math.round(est[e] / todo.length * 100);
+  return `
+    <div class="bar-row">
+      <div class="bar-head">
+        <span class="bar-name">${esc(e)}</span>
+        <span class="bar-val">${est[e]} · ${pct}%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+}).join("");
+
+const porModulo = [
+  { nombre: "Pedidos", lista: DB.pedidos },
+  { nombre: "Toolbox", lista: DB.toolbox },
+  { nombre: "Quest",   lista: DB.quests }
+].map(m => {
+  const e = porEstado(m.lista);
+  return `<tr>
+    <td class="nombre">${esc(m.nombre)}</td>
+    <td>${m.lista.length}</td>
+    <td>${e.listo || 0}</td>
+    <td>${e.activo || 0}</td>
+    <td>${e.pendiente || 0}</td>
+    <td>${e.pausado || 0}</td>
+  </tr>`;
+}).join("");
+
+document.getElementById("app").innerHTML =
+  secHead("Módulo 01", "<em>Status</em>", "Resumen con todo. Se recalcula solo cuando editás data.js.") +
+  `<div class="stat-grid">` + tiles.map(t => `
+    <div class="stat">
+      <div class="stat-label">${esc(t.l)}</div>
+      <div class="stat-value${t.accent ? " accent" : ""}">${esc(t.v)}</div>
+      <div class="stat-foot">${esc(t.f)}</div>
+    </div>`).join("") + `</div>
+
+  <div class="panel">
+    <div class="panel-title">Distribución por estado</div>
+    ${barras || '<div class="empty">Sin registros todavía.</div>'}
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Desglose por módulo</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Módulo</th><th>Total</th><th>Listo</th><th>Activo</th><th>Pendiente</th><th>Pausado</th></tr></thead>
+      <tbody>${porModulo}</tbody>
+    </table></div>
+  </div>`;
+</script>
+
+</body>
+</html>

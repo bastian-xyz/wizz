@@ -1,0 +1,132 @@
+/* =========================================
+   theme.css - BASTIAN.XYZ C.I.D. MASTER THEME
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* PALETA MAESTRA C.I.D. */
+  --cid-negro: #111827;
+  --cid-panel: rgba(22, 31, 46, 0.70);
+  --cid-panel-soft: rgba(15, 76, 92, 0.20);
+  --cid-petroleo: #0F4C5C;
+  --cid-petroleo-br: #17738a;
+  --cid-plata: #9CA3AF;
+  --cid-blanco: #F8FAFC;
+  --cid-border: rgba(156, 163, 175, 0.25);
+
+  /* 1. MAPPING GENERAL (Variables compartidas en tus herramientas) */
+  --bg: var(--cid-negro);
+  --bg-base: var(--cid-negro);
+  --bg2: var(--cid-panel-soft);
+  --surface: var(--cid-panel);
+  --surface2: var(--cid-panel-soft);
+  --panel: var(--cid-panel);
+  --panel-2: var(--cid-panel-soft);
+  --bg-panel: var(--cid-panel);
+  --bg-input: rgba(11, 17, 26, 0.6);
+
+  --border: var(--cid-border);
+  --border-soft: rgba(156, 163, 175, 0.1);
+  --line: var(--cid-border);
+  --panel-line: var(--cid-border);
+
+  --text: var(--cid-blanco);
+  --text-main: var(--cid-blanco);
+  --muted: var(--cid-plata);
+  --text-muted: var(--cid-plata);
+  --muted2: rgba(156, 163, 175, 0.5);
+  --text-dim: var(--cid-plata);
+
+  /* 2. OVERRIDE DE COLORES DE ACENTO (Unificando a tonos petróleo/plata) */
+  --brass: var(--cid-petroleo-br);
+  --brass-dim: var(--cid-petroleo);
+  --amber: var(--cid-petroleo-br);
+  --amber-dim: var(--cid-petroleo);
+  --cyan: var(--cid-plata); 
+  --cyan-dim: rgba(156,163,175,.3);
+  --accent: var(--cid-petroleo-br);
+  --accent-dim: var(--cid-petroleo);
+  --amber-glow: rgba(15, 76, 92, 0.25);
+  --accent-glow: rgba(23, 115, 138, 0.25);
+  --grid-minor: rgba(15, 76, 92, 0.42);
+  --grid-major: rgba(15, 76, 92, 0.78);
+}
+
+/* 3. FONDO GLOBAL (LA MALLA TÉCNICA C.I.D.) */
+body {
+  background-color: var(--cid-negro) !important;
+  background-image:
+    linear-gradient(rgba(15,76,92,.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,76,92,.42) 1px, transparent 1px),
+    linear-gradient(rgba(15,76,92,.78) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,76,92,.78) 1px, transparent 1px) !important;
+  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px !important;
+  background-attachment: fixed !important;
+  font-family: 'Montserrat', sans-serif !important;
+  position: relative;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+}
+
+body::before {
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse at 50% 46%, transparent 35%, rgba(0,0,0,.65) 100%);
+}
+
+body::after {
+  top: -20px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  opacity: 0.7;
+  z-index: 3;
+  background: linear-gradient(90deg, transparent, rgba(156,163,175,.45), transparent);
+  animation: cid-scan 8s linear infinite;
+}
+
+@keyframes cid-scan {
+  0% { transform: translateY(-12px); opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { transform: translateY(100vh); opacity: 0.2; }
+}
+
+html, body {
+  min-height: 100%;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Limpiar gradientes sólidos de algunas herramientas para que se vea la malla */
+.main, .workspace, .layout {
+  background: transparent !important;
+}
+
+/* 4. EFECTO CRISTAL (GLASSMORPHISM) PARA PANELES */
+.card, .panel, .control-section,
+.sidebar, .footer, .hud-corner, #textPanel, #layersPanel,
+.score-card, .analysis-card, .big-line, .preview {
+  background-color: var(--cid-panel) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-color: var(--cid-border) !important;
+}
+
+header {
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 5. TIPOGRAFÍA EN BOTONES Y TÍTULOS */
+h1, h2, h3, button, .brand, .tab, .toggle {
+  font-family: 'Montserrat', sans-serif !important;
+}

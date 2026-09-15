@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HUB · BASTIAN.XYZ</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<main class="shell" id="app"></main>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+mountChrome("menu");
+
+const total = DB.pedidos.length + DB.toolbox.length + DB.quests.length;
+
+const CARDS = [
+  { n: "01", g: "status",  href: "status.html",  t: "Status",  d: "Resumen con todo: totales, estados y avance general.", c: plural(total, "registro", "registros") },
+  { n: "02", g: "pedidos", href: "pedidos.html", t: "Pedidos", d: "Los encargos, uno por fila. Acá los vas cargando.",     c: plural(DB.pedidos.length, "pedido", "pedidos") },
+  { n: "03", g: "toolbox", href: "toolbox.html", t: "Toolbox", d: "Las herramientas que ya tenemos integradas y andando.", c: plural(DB.toolbox.length, "herramienta", "herramientas") },
+  { n: "04", g: "quest",   href: "quest.html",   t: "Quest",   d: "Objetivos y pendientes. Se edita sobre la marcha.",     c: plural(DB.quests.length, "quest", "quests") }
+];
+
+document.getElementById("app").innerHTML =
+  secHead("Índice general", "Menú <em>principal</em>", "Cuatro módulos. Todo sale de data.js.") +
+  `<div class="menu-grid">` + CARDS.map(c => `
+    <a class="menu-card" href="${c.href}">
+      <div class="mc-glyph">${GLYPHS[c.g]}</div>
+      <div class="mc-num">${c.n}</div>
+      <div class="mc-title">${esc(c.t)}</div>
+      <div class="mc-desc">${esc(c.d)}</div>
+      <div class="mc-count">${esc(c.c)}</div>
+    </a>`).join("") + `</div>`;
+</script>
+
+</body>
+</html>
