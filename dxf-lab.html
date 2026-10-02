@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DXF LAB — Generador CNC</title>
+<style>
+  :root{
+    --bg: #0a0d10;
+    --bg2: #0f1318;
+    --panel: #12171d;
+    --line: #1f2a33;
+    --cyan: #4fd8e8;
+    --cyan-dim: #2a6b74;
+    --amber: #ffb454;
+    --text: #cfe3e8;
+    --text-dim: #6f8891;
+    --danger: #ff6b6b;
+    --mono: 'JetBrains Mono','Consolas','SF Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);}
+  body{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 18px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#10151b,#0c1015);
+    flex-shrink:0;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand h1{font-size:14px;letter-spacing:3px;margin:0;color:var(--cyan);font-weight:600;}
+  .brand span{font-size:10px;color:var(--text-dim);letter-spacing:1px;}
+  .status{font-size:10px;color:var(--text-dim);letter-spacing:1px;text-align:right;line-height:1.5;}
+  .status b{color:var(--amber);}
+
+  .layout{flex:1;display:flex;min-height:0;}
+  #draftView{flex:1;min-height:0;display:none;position:relative}
+  #draftView iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#070c14}
+  body.draft .layout{display:none}
+  body.draft #draftView{display:block}
+  .modes{display:flex;gap:4px;margin-left:12px}
+  .modes button{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;padding:6px 10px;border-radius:3px;border:1px solid var(--line);background:transparent;color:var(--text-dim);cursor:pointer}
+  .modes button.on{border-color:var(--cyan-dim);color:var(--cyan);background:rgba(79,216,232,.08)}
+  .launch-btn.draft{grid-column:1/-1;display:flex;align-items:center;gap:16px}
+  .launch-btn.draft .lb-icon{margin:0}
+
+  /* ===================== LAUNCHER (pantalla de inicio) ===================== */
+  #launcher{
+    position:fixed;inset:0;z-index:50;
+    background:radial-gradient(ellipse at 50% 20%, #10161c 0%, var(--bg) 70%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:40px 24px;overflow-y:auto;
+  }
+  #launcher .lh1{font-size:13px;letter-spacing:4px;color:var(--cyan);margin:0 0 4px;text-align:center;}
+  #launcher .lsub{font-size:11px;letter-spacing:1.5px;color:var(--text-dim);margin:0 0 34px;text-align:center;}
+  .launcher-grid{
+    display:grid;grid-template-columns:repeat(3,minmax(0,220px));gap:14px;
+    width:100%;max-width:760px;
+  }
+  .launch-btn{
+    background:var(--panel);border:1px solid var(--line);border-radius:4px;
+    padding:20px 16px;text-align:left;cursor:pointer;color:var(--text);
+    font-family:var(--mono);transition:border-color .15s,transform .15s,background .15s;
+  }
+  .launch-btn:hover{border-color:var(--cyan-dim);background:#151b22;transform:translateY(-2px);}
+  .launch-btn .lb-icon{font-size:22px;color:var(--cyan);display:block;margin-bottom:10px;}
+  .launch-btn .lb-name{font-size:12px;letter-spacing:1.5px;font-weight:600;display:block;margin-bottom:6px;}
+  .launch-btn .lb-desc{font-size:10px;color:var(--text-dim);line-height:1.4;display:block;}
+  .launcher-foot{margin-top:30px;font-size:9.5px;color:var(--text-dim);letter-spacing:1px;text-align:center;opacity:.7;}
+  button.iconbtn.launcher-open{margin-right:4px;}
+
+  @media (max-width:860px){
+    .launcher-grid{grid-template-columns:repeat(2,1fr);max-width:480px;}
+    #launcher .lh1{font-size:12px;letter-spacing:3px;}
+    .launch-btn{padding:16px 12px;}
+    .launch-btn .lb-icon{font-size:19px;margin-bottom:8px;}
+    .launch-btn .lb-name{font-size:10.5px;}
+    .launch-btn .lb-desc{font-size:9px;}
+  }
+  .sidebar{
+    width:360px;flex-shrink:0;background:var(--panel);
+    border-right:1px solid var(--line);overflow-y:auto;
+    padding:0 0 24px 0;
+  }
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;background:
+    radial-gradient(circle at 50% 40%, #0d1116 0%, #090b0e 100%);
+  }
+
+  .tabs{display:flex;border-bottom:1px solid var(--line);}
+  .tab{
+    flex:1;padding:12px 4px;text-align:center;font-size:10px;letter-spacing:1.5px;
+    color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;
+    background:var(--bg2);user-select:none;
+  }
+  .tab:hover{color:var(--text);}
+  .tab.active{color:var(--cyan);border-bottom-color:var(--cyan);background:var(--panel);}
+
+  .group{padding:16px 18px;border-bottom:1px solid var(--line);}
+  .group.alter{background:#0d1a1c;}
+  .group h3{
+    font-size:10px;letter-spacing:2px;color:var(--amber);margin:0 0 12px 0;
+    font-weight:600;display:flex;align-items:center;gap:6px;
+  }
+  .group.alter h3{color:var(--cyan);}
+  .field{margin-bottom:12px;}
+  .field label{
+    display:flex;justify-content:space-between;align-items:center;font-size:10.5px;color:var(--text-dim);
+    margin-bottom:5px;letter-spacing:.3px;gap:8px;
+  }
+  .field label span.txt{flex:1;}
+  input.val{
+    width:60px;background:var(--bg2);border:1px solid var(--line);color:var(--cyan);
+    font-family:var(--mono);font-size:11px;text-align:right;border-radius:3px;
+    padding:3px 5px;font-variant-numeric:tabular-nums;
+  }
+  input.val:focus{outline:none;border-color:var(--cyan);}
+  .unit{color:var(--text-dim);font-size:10px;}
+  input[type=range]{
+    width:100%;accent-color:var(--cyan);height:4px;background:var(--line);
+    -webkit-appearance:none;appearance:none;border-radius:2px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:12px;height:12px;border-radius:50%;
+    background:var(--cyan);cursor:pointer;box-shadow:0 0 6px var(--cyan);
+  }
+  select, input[type=number].wide{
+    width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--text);
+    padding:7px 8px;font-family:var(--mono);font-size:11.5px;border-radius:3px;
+  }
+  select:focus{outline:none;border-color:var(--cyan-dim);}
+  .row2{display:flex;gap:8px;}
+  .row2 .field{flex:1;}
+  .chk{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);margin-bottom:10px;cursor:pointer;}
+  .chk input{accent-color:var(--cyan);}
+  .seedrow{display:flex;gap:8px;align-items:center;margin-top:4px;}
+  .seedrow input.wide{flex:1;}
+  .dice{
+    background:var(--bg2);border:1px solid var(--line);color:var(--cyan);
+    width:34px;height:32px;border-radius:3px;cursor:pointer;font-size:14px;flex-shrink:0;
+  }
+  .dice:hover{border-color:var(--cyan);}
+  .hint{font-size:9.5px;color:var(--text-dim);margin-top:8px;line-height:1.5;opacity:.8;}
+
+  .canvas-wrap{flex:1;position:relative;min-height:0;touch-action:none;overflow:hidden;}
+  #dimLay{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  #dimLay .dl{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;padding:2px 6px;border-radius:3px;white-space:nowrap;user-select:none;
+    background:rgba(11,17,26,.85);border:1px solid rgba(127,211,227,.55);color:#bfeef7;font:700 11px/1.25 "JetBrains Mono",monospace}
+  #dimLay .dl:hover{border-color:#7fd3e3;color:#fff;background:rgba(15,76,92,.95)}
+  #dimLay .dl small{font-weight:600;color:#7fa8b3;margin-right:4px;font-size:9px;letter-spacing:.06em}
+  #dimIn{position:absolute;z-index:5;width:96px;height:28px;padding:0 8px;border-radius:4px;border:1px solid #7fd3e3;background:#0b111a;color:#e6eef3;font:700 13px "JetBrains Mono",monospace;text-align:center;pointer-events:auto;box-shadow:0 4px 18px rgba(0,0,0,.5)}
+  #dimIn:focus{outline:none}
+  #dimMsg{position:absolute;left:10px;top:8px;font:600 10.5px "JetBrains Mono",monospace;color:#7fd3e3;pointer-events:none}
+  .iconbtn.on{border-color:#7fd3e3;color:#7fd3e3}
+  canvas{display:block;width:100%;height:100%;}
+  .zoomhint{
+    position:absolute;bottom:10px;left:10px;font-size:9px;letter-spacing:.5px;
+    color:var(--text-dim);opacity:.6;pointer-events:none;line-height:1.4;
+  }
+
+  .footer{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 18px;border-top:1px solid var(--line);background:var(--bg2);
+    flex-shrink:0;flex-wrap:wrap;gap:10px;
+  }
+  .stats{display:flex;gap:22px;font-size:10.5px;color:var(--text-dim);flex-wrap:wrap;}
+  .stats b{color:var(--cyan);display:block;font-size:13px;font-variant-numeric:tabular-nums;}
+  .stats div{line-height:1.3;}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;}
+  button.export{
+    background:var(--cyan);color:#031014;border:none;padding:10px 20px;
+    font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:1.5px;
+    border-radius:3px;cursor:pointer;
+  }
+  button.export:hover{background:#6fe4f0;}
+  button.ghost{
+    background:transparent;color:var(--text-dim);border:1px solid var(--line);
+    padding:10px 14px;font-family:var(--mono);font-size:11px;letter-spacing:1px;
+    border-radius:3px;cursor:pointer;
+  }
+  button.ghost:hover{color:var(--text);border-color:var(--cyan-dim);}
+  button.iconbtn{
+    background:transparent;color:var(--text-dim);border:1px solid var(--line);
+    width:36px;height:36px;font-size:14px;border-radius:3px;cursor:pointer;flex-shrink:0;
+  }
+  button.iconbtn:hover{color:var(--cyan);border-color:var(--cyan-dim);}
+
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-track{background:var(--bg2);}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+  /* ===================== MÓVIL ===================== */
+  @media (max-width: 860px){
+    header{padding:8px 12px;}
+    .brand h1{font-size:12px;letter-spacing:2px;}
+    .brand span{display:none;}
+    .status{font-size:8.5px;line-height:1.4;}
+
+    .layout{flex-direction:column;}
+    .main{order:1;flex:1 1 auto;min-height:0;}
+    .canvas-wrap{min-height:0;}
+    .sidebar{
+      order:2;width:100%;flex-shrink:0;
+      height:44vh;max-height:420px;
+      border-right:none;border-top:1px solid var(--line);
+    }
+    .tabs{position:sticky;top:0;z-index:2;flex-wrap:wrap;}
+    .tab{flex:1 1 33.33%;font-size:9px;padding:10px 2px;}
+
+    .footer{padding:8px 12px;gap:8px;}
+    .stats{gap:14px;font-size:9.5px;order:2;width:100%;justify-content:space-between;}
+    .actions{order:1;width:100%;justify-content:stretch;}
+    .actions button{flex:1;}
+    button.export{padding:12px 10px;font-size:10.5px;}
+    button.ghost{padding:12px 8px;font-size:10px;}
+  }
+  .vbadge{font:700 10px 'JetBrains Mono',monospace;letter-spacing:1px;color:#7fd3e3;border:1px solid rgba(127,211,227,.35);background:rgba(15,76,92,.25);border-radius:12px;padding:3px 9px;cursor:pointer;white-space:nowrap}
+  .vbadge:hover{border-color:#7fd3e3}
+  #vlogBg{position:fixed;inset:0;z-index:100;background:rgba(3,7,12,.7);display:none;align-items:center;justify-content:center;padding:16px}
+  #vlogBg.on{display:flex}
+  #vlogBox{width:min(560px,100%);max-height:80vh;overflow:auto;background:#0b131d;border:1px solid #2c7a86;border-radius:6px;padding:16px;font-family:'JetBrains Mono',monospace;color:#cfe3e8}
+  #vlogBox h3{margin:0 0 12px;font-size:11px;letter-spacing:3px;color:#7fd3e3;display:flex;justify-content:space-between;align-items:center}
+  #vlogBox h4{margin:14px 0 8px;font-size:10px;letter-spacing:2px;color:#ffb454}
+  #vlogBox button{background:none;border:1px solid #2c7a86;color:#7fd3e3;font:600 10px 'JetBrains Mono',monospace;padding:4px 9px;border-radius:3px;cursor:pointer}
+  .vlg{border-left:2px solid #2c7a86;padding:3px 0 10px 12px;margin-bottom:4px}
+  .vlg b{font-size:12px;color:#fff}.vlg time{color:#6f8891;font-size:10px;margin-left:8px}
+  .vlg ul{margin:6px 0 0 16px;padding:0;font-size:11px;line-height:1.55}
+</style>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+<div id="launcher">
+  <div class="lh1">DXF LAB</div>
+  <div class="lsub">ELIGE UN GENERADOR PARA COMENZAR</div>
+  <div class="launcher-grid">
+    <button class="launch-btn" data-tab="mandala">
+      <span class="lb-icon">◈</span>
+      <span class="lb-name">MANDALA</span>
+      <span class="lb-desc">Patrones radiales con motivos repetidos</span>
+    </button>
+    <button class="launch-btn" data-tab="biombo">
+      <span class="lb-icon">⬡</span>
+      <span class="lb-name">BIOMBO</span>
+      <span class="lb-desc">Paneles de retícula: hexágonos, rombos u ondas</span>
+    </button>
+    <button class="launch-btn" data-tab="perforado">
+      <span class="lb-icon">▦</span>
+      <span class="lb-name">PANEL PERFORADO</span>
+      <span class="lb-desc">Perforaciones en grilla regular ortogonal</span>
+    </button>
+    <button class="launch-btn" data-tab="gradiente">
+      <span class="lb-icon">◐</span>
+      <span class="lb-name">GRADIENTE</span>
+      <span class="lb-desc">Perforaciones con tamaño progresivo</span>
+    </button>
+    <button class="launch-btn" data-tab="imagen">
+      <span class="lb-icon">▩</span>
+      <span class="lb-name">IMAGEN</span>
+      <span class="lb-desc">Convierte una foto en malla perforada</span>
+    </button>
+    <button class="launch-btn" data-tab="estandar">
+      <span class="lb-icon">⚙</span>
+      <span class="lb-name">ESTÁNDAR</span>
+      <span class="lb-desc">Bridas, atiesadores y placas base con pernos</span>
+    </button>
+    <button class="launch-btn draft" data-tab="draft">
+      <span class="lb-icon">✎</span>
+      <span><span class="lb-name">DRAFT · DIBUJO TÉCNICO</span>
+      <span class="lb-desc">Línea, rectángulo, círculo, arco, polilínea y texto con capas; selección por ventana, vértices, unir, separar, radios y cotas editables</span></span>
+    </button>
+  </div>
+  <div class="launcher-foot">UNIDADES: MM &nbsp;·&nbsp; FORMATO: DXF R12 &nbsp;·&nbsp; COMPATIBLE LASER / PLASMA / ROUTER</div>
+</div>
+
+<header>
+  <div class="brand">
+    <button class="iconbtn launcher-open" id="btn-launcher" title="Elegir generador">▦</button>
+    <h1>DXF LAB</h1>
+    <span>GENERADOR PARAMÉTRICO // CORTE CNC</span>
+    <span class="vbadge" id="vbadge" title="Historial de versiones" style="margin-left:10px"></span>
+    <div class="modes"><button id="m-gen" class="on" title="Generadores paramétricos">GENERADORES</button><button id="m-draft" title="Dibujo técnico libre con cotas">✎ DRAFT</button></div>
+  </div>
+  <div class="status">
+    LASER · PLASMA · ROUTER · CO₂ <b>· COMPATIBLE</b><br>
+    UNIDADES: MM &nbsp;·&nbsp; FORMATO: DXF R12
+  </div>
+</header>
+
+<div id="vlogBg"><div id="vlogBox"><h3>HISTORIAL DE VERSIONES<button id="vlogX">CERRAR</button></h3><div id="vlogList"></div></div></div>
+<div id="draftView"></div>
+<script type="application/octet-stream" id="src-draft">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</script>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="tabs">
+      <div class="tab active" data-tab="mandala">MANDALA</div>
+      <div class="tab" data-tab="biombo">BIOMBO</div>
+      <div class="tab" data-tab="perforado">PANEL</div>
+      <div class="tab" data-tab="gradiente">GRADIENTE</div>
+      <div class="tab" data-tab="imagen">IMAGEN</div>
+      <div class="tab" data-tab="estandar">ESTÁNDAR</div>
+    </div>
+
+    <!-- MANDALA -->
+    <div class="panel-controls" id="ctrl-mandala">
+      <div class="group">
+        <h3>Geometría base</h3>
+        <div class="field">
+          <label><span class="txt">Diámetro exterior</span><input class="val" id="v-m_d" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="m_d" min="50" max="2000" value="400" step="10">
+        </div>
+        <div class="field">
+          <label><span class="txt">Radio interior (vacío central)</span><input class="val" id="v-m_ir" type="number"><span class="unit">%</span></label>
+          <input type="range" id="m_ir" min="0" max="70" value="15" step="1">
+        </div>
+        <label class="chk"><input type="checkbox" id="m_hole" checked> Hueco central (montaje / eje)</label>
+        <div class="field" id="wrap-m_holed">
+          <label><span class="txt">Diámetro hueco central</span><input class="val" id="v-m_holed" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="m_holed" min="3" max="100" value="12" step="1">
+        </div>
+        <label class="chk"><input type="checkbox" id="m_outer" checked> Circunferencia exterior (aro de corte)</label>
+      </div>
+
+      <div class="group">
+        <h3>Patrón radial</h3>
+        <div class="field">
+          <label><span class="txt">Anillos</span><input class="val" id="v-m_rings" type="number"></label>
+          <input type="range" id="m_rings" min="1" max="12" value="4" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Repeticiones por vuelta</span><input class="val" id="v-m_n" type="number"></label>
+          <input type="range" id="m_n" min="3" max="72" value="12" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Motivo</span></label>
+          <select id="m_motif">
+            <option value="petal">Pétalo</option>
+            <option value="diamond">Diamante</option>
+            <option value="gota">Gota</option>
+            <option value="linea">Línea radial</option>
+            <option value="arco">Arco tangente</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><span class="txt">Tamaño motivo</span><input class="val" id="v-m_size" type="number"><span class="unit">%</span></label>
+          <input type="range" id="m_size" min="20" max="150" value="85" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Proporción (ancho/largo)</span><input class="val" id="v-m_aspect" type="number"><span class="unit">%</span></label>
+          <input type="range" id="m_aspect" min="10" max="100" value="45" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Ahusado entre anillos</span></label>
+          <select id="m_taper">
+            <option value="none">Uniforme</option>
+            <option value="out">Crece hacia afuera</option>
+            <option value="in">Crece hacia el centro</option>
+          </select>
+        </div>
+        <label class="chk"><input type="checkbox" id="m_alt" checked> Alternar anillos (offset 50%)</label>
+      </div>
+
+      <div class="group alter">
+        <h3>⟡ Alteración orgánica</h3>
+        <div class="field">
+          <label><span class="txt">Ruido de ángulo</span><input class="val" id="v-m_jangle" type="number"><span class="unit">°</span></label>
+          <input type="range" id="m_jangle" min="0" max="30" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Ruido de tamaño</span><input class="val" id="v-m_jsize" type="number"><span class="unit">%</span></label>
+          <input type="range" id="m_jsize" min="0" max="60" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Ruido de radio</span><input class="val" id="v-m_jrad" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="m_jrad" min="0" max="40" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Omitir motivos al azar</span><input class="val" id="v-m_skip" type="number"><span class="unit">%</span></label>
+          <input type="range" id="m_skip" min="0" max="70" value="0" step="1">
+        </div>
+        <div class="seedrow">
+          <input class="wide" id="m_seed" type="number" value="42">
+          <button class="dice" data-seed="m_seed" title="Nueva semilla">🎲</button>
+        </div>
+        <div class="hint">La semilla fija el resultado del azar: misma semilla + mismos parámetros = mismo DXF, siempre reproducible.</div>
+      </div>
+    </div>
+
+    <!-- BIOMBO -->
+    <div class="panel-controls" id="ctrl-biombo" style="display:none">
+      <div class="group">
+        <h3>Panel</h3>
+        <div class="row2">
+          <div class="field"><label><span class="txt">Ancho</span><input class="val" id="v-b_w" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="b_w" min="100" max="3000" value="600" step="10"></div>
+          <div class="field"><label><span class="txt">Alto</span><input class="val" id="v-b_h" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="b_h" min="100" max="3000" value="1800" step="10"></div>
+        </div>
+        <div class="field">
+          <label><span class="txt">Margen / marco sólido</span><input class="val" id="v-b_margin" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="b_margin" min="0" max="200" value="40" step="2">
+        </div>
+        <label class="chk"><input type="checkbox" id="b_frame" checked> Incluir contorno de panel en el corte</label>
+      </div>
+      <div class="group">
+        <h3>Patrón de calado</h3>
+        <div class="field">
+          <label><span class="txt">Tipo</span></label>
+          <select id="b_type">
+            <option value="hex">Retícula hexagonal</option>
+            <option value="diamond">Retícula de rombos</option>
+            <option value="wave">Lamas onduladas</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><span class="txt">Tamaño de celda</span><input class="val" id="v-b_cell" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="b_cell" min="10" max="200" value="45" step="1">
+        </div>
+        <div class="field" id="wrap-b_gap">
+          <label><span class="txt">Puente entre celdas</span><input class="val" id="v-b_gap" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="b_gap" min="1" max="50" value="8" step="1">
+        </div>
+        <div class="field" id="wrap-b_amp" style="display:none">
+          <label><span class="txt">Amplitud de onda</span><input class="val" id="v-b_amp" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="b_amp" min="0" max="100" value="18" step="1">
+        </div>
+        <div class="field" id="wrap-b_wl" style="display:none">
+          <label><span class="txt">Longitud de onda</span><input class="val" id="v-b_wl" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="b_wl" min="40" max="600" value="180" step="10">
+        </div>
+      </div>
+
+      <div class="group alter">
+        <h3>⟡ Alteración orgánica</h3>
+        <div class="field">
+          <label><span class="txt">Ruido de tamaño / celda</span><input class="val" id="v-b_jsize" type="number"><span class="unit">%</span></label>
+          <input type="range" id="b_jsize" min="0" max="60" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Ruido de posición</span><input class="val" id="v-b_jpos" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="b_jpos" min="0" max="30" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Omitir celdas al azar</span><input class="val" id="v-b_skip" type="number"><span class="unit">%</span></label>
+          <input type="range" id="b_skip" min="0" max="70" value="0" step="1">
+        </div>
+        <div class="seedrow">
+          <input class="wide" id="b_seed" type="number" value="42">
+          <button class="dice" data-seed="b_seed" title="Nueva semilla">🎲</button>
+        </div>
+        <div class="hint">En lamas onduladas, "omitir" salta filas completas y "posición" desfasa cada fila verticalmente.</div>
+      </div>
+    </div>
+
+    <!-- PANEL PERFORADO -->
+    <div class="panel-controls" id="ctrl-perforado" style="display:none">
+      <div class="group">
+        <h3>Panel</h3>
+        <div class="row2">
+          <div class="field"><label><span class="txt">Ancho</span><input class="val" id="v-p_w" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="p_w" min="50" max="3000" value="600" step="10"></div>
+          <div class="field"><label><span class="txt">Alto</span><input class="val" id="v-p_h" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="p_h" min="50" max="3000" value="400" step="10"></div>
+        </div>
+        <div class="field">
+          <label><span class="txt">Margen</span><input class="val" id="v-p_margin" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="p_margin" min="0" max="150" value="20" step="1">
+        </div>
+        <label class="chk"><input type="checkbox" id="p_frame" checked> Incluir contorno de panel en el corte</label>
+      </div>
+      <div class="group">
+        <h3>Perforado</h3>
+        <div class="field">
+          <label><span class="txt">Forma</span></label>
+          <select id="p_shape">
+            <option value="circle">Círculo</option>
+            <option value="square">Cuadrado</option>
+            <option value="diamond">Rombo</option>
+            <option value="hex">Hexágono</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><span class="txt">Tamaño de perforación</span><input class="val" id="v-p_size" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="p_size" min="2" max="150" value="10" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Paso (pitch)</span><input class="val" id="v-p_pitch" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="p_pitch" min="4" max="300" value="18" step="1">
+        </div>
+        <label class="chk"><input type="checkbox" id="p_stagger" checked> Filas alternadas (trabado)</label>
+      </div>
+
+      <div class="group alter">
+        <h3>⟡ Alteración orgánica</h3>
+        <div class="field">
+          <label><span class="txt">Ruido de tamaño</span><input class="val" id="v-p_jsize" type="number"><span class="unit">%</span></label>
+          <input type="range" id="p_jsize" min="0" max="60" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Ruido de posición</span><input class="val" id="v-p_jpos" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="p_jpos" min="0" max="30" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Omitir perforaciones al azar</span><input class="val" id="v-p_skip" type="number"><span class="unit">%</span></label>
+          <input type="range" id="p_skip" min="0" max="70" value="0" step="1">
+        </div>
+        <div class="seedrow">
+          <input class="wide" id="p_seed" type="number" value="42">
+          <button class="dice" data-seed="p_seed" title="Nueva semilla">🎲</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRADIENTE -->
+    <div class="panel-controls" id="ctrl-gradiente" style="display:none">
+      <div class="group">
+        <h3>Panel</h3>
+        <div class="row2">
+          <div class="field"><label><span class="txt">Ancho</span><input class="val" id="v-g_w" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="g_w" min="50" max="3000" value="600" step="10"></div>
+          <div class="field"><label><span class="txt">Alto</span><input class="val" id="v-g_h" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="g_h" min="50" max="3000" value="400" step="10"></div>
+        </div>
+        <div class="field">
+          <label><span class="txt">Margen</span><input class="val" id="v-g_margin" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="g_margin" min="0" max="150" value="20" step="1">
+        </div>
+        <label class="chk"><input type="checkbox" id="g_frame" checked> Incluir contorno de panel en el corte</label>
+      </div>
+      <div class="group">
+        <h3>Campo de gradiente</h3>
+        <div class="field">
+          <label><span class="txt">Forma</span></label>
+          <select id="g_shape">
+            <option value="circle">Círculo</option>
+            <option value="square">Cuadrado</option>
+            <option value="diamond">Rombo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><span class="txt">Modo</span></label>
+          <select id="g_mode">
+            <option value="linear">Lineal</option>
+            <option value="radial">Radial</option>
+          </select>
+        </div>
+        <div class="field" id="wrap-g_angle">
+          <label><span class="txt">Ángulo</span><input class="val" id="v-g_angle" type="number"><span class="unit">°</span></label>
+          <input type="range" id="g_angle" min="0" max="180" value="0" step="5">
+        </div>
+        <div class="field">
+          <label><span class="txt">Paso (pitch)</span><input class="val" id="v-g_pitch" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="g_pitch" min="4" max="200" value="16" step="1">
+        </div>
+        <div class="row2">
+          <div class="field"><label><span class="txt">Ø mín</span><input class="val" id="v-g_min" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="g_min" min="0.5" max="100" value="2" step="0.5"></div>
+          <div class="field"><label><span class="txt">Ø máx</span><input class="val" id="v-g_max" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="g_max" min="1" max="150" value="13" step="0.5"></div>
+        </div>
+        <div class="field">
+          <label><span class="txt">Curva (gamma)</span><input class="val" id="v-g_gamma" type="number"></label>
+          <input type="range" id="g_gamma" min="0.2" max="3" value="1" step="0.1">
+        </div>
+        <label class="chk"><input type="checkbox" id="g_invert"> Invertir gradiente</label>
+        <label class="chk"><input type="checkbox" id="g_stagger" checked> Filas alternadas (trabado)</label>
+      </div>
+
+      <div class="group alter">
+        <h3>⟡ Alteración orgánica</h3>
+        <div class="field">
+          <label><span class="txt">Ruido de tamaño</span><input class="val" id="v-g_jsize" type="number"><span class="unit">%</span></label>
+          <input type="range" id="g_jsize" min="0" max="60" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Ruido de posición</span><input class="val" id="v-g_jpos" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="g_jpos" min="0" max="30" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Omitir perforaciones al azar</span><input class="val" id="v-g_skip" type="number"><span class="unit">%</span></label>
+          <input type="range" id="g_skip" min="0" max="70" value="0" step="1">
+        </div>
+        <div class="seedrow">
+          <input class="wide" id="g_seed" type="number" value="42">
+          <button class="dice" data-seed="g_seed" title="Nueva semilla">🎲</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMAGEN A MALLA PERFORADA -->
+    <div class="panel-controls" id="ctrl-imagen" style="display:none">
+      <div class="group">
+        <h3>Imagen de origen</h3>
+        <input type="file" id="i_file" accept="image/*" class="wide" style="margin-bottom:10px;">
+        <div id="i_preview_wrap" style="display:none;border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+          <canvas id="i_preview" style="width:100%;display:block;image-rendering:pixelated;"></canvas>
+        </div>
+        <div class="hint" id="i_status">Sube un retrato, logo o foto de buen contraste. Entre más nítida la imagen, mejor sale el mallado.</div>
+      </div>
+
+      <div class="group">
+        <h3>Panel</h3>
+        <div class="row2">
+          <div class="field"><label><span class="txt">Ancho</span><input class="val" id="v-i_w" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="i_w" min="50" max="3000" value="500" step="10"></div>
+          <div class="field"><label><span class="txt">Alto</span><input class="val" id="v-i_h" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="i_h" min="50" max="3000" value="500" step="10"></div>
+        </div>
+        <button class="ghost" id="i_matchaspect" style="width:100%;margin-bottom:12px;">⇄ Ajustar alto a proporción de la imagen</button>
+        <div class="field">
+          <label><span class="txt">Margen</span><input class="val" id="v-i_margin" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="i_margin" min="0" max="150" value="15" step="1">
+        </div>
+        <label class="chk"><input type="checkbox" id="i_frame" checked> Incluir contorno de panel en el corte</label>
+      </div>
+
+      <div class="group">
+        <h3>Conversión a mallado</h3>
+        <div class="field">
+          <label><span class="txt">Modo</span></label>
+          <select id="i_mode">
+            <option value="halftone">Halftone (gradiente de tamaño)</option>
+            <option value="stencil">Stencil (silueta binaria)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><span class="txt">Forma</span></label>
+          <select id="i_shape">
+            <option value="circle">Círculo</option>
+            <option value="square">Cuadrado</option>
+            <option value="diamond">Rombo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label><span class="txt">Paso (pitch)</span><input class="val" id="v-i_pitch" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="i_pitch" min="2" max="80" value="6" step="0.5">
+        </div>
+        <div class="row2" id="wrap-i_minmax">
+          <div class="field"><label><span class="txt">Ø mín</span><input class="val" id="v-i_min" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="i_min" min="0.3" max="60" value="0.8" step="0.1"></div>
+          <div class="field"><label><span class="txt">Ø máx</span><input class="val" id="v-i_max" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="i_max" min="1" max="80" value="5.5" step="0.1"></div>
+        </div>
+        <div class="field" id="wrap-i_fixed" style="display:none">
+          <label><span class="txt">Ø perforación</span><input class="val" id="v-i_fixed" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="i_fixed" min="0.5" max="60" value="4" step="0.5">
+        </div>
+        <div class="field">
+          <label><span class="txt">Umbral (blanco/negro)</span><input class="val" id="v-i_threshold" type="number"><span class="unit">%</span></label>
+          <input type="range" id="i_threshold" min="0" max="100" value="50" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Curva (gamma)</span><input class="val" id="v-i_gamma" type="number"></label>
+          <input type="range" id="i_gamma" min="0.2" max="3" value="1" step="0.1">
+        </div>
+        <label class="chk"><input type="checkbox" id="i_invert"> Invertir tonos (negativo)</label>
+        <label class="chk"><input type="checkbox" id="i_stagger" checked> Filas alternadas (trabado)</label>
+        <label class="chk"><input type="checkbox" id="i_bg" checked> Ignorar fondo claro (no perforar blancos)</label>
+        <div class="hint">Halftone: el tamaño de cada perforación sigue el tono de la imagen (más oscuro = más grande, por defecto). Stencil: agujero de tamaño fijo solo donde el tono supera el umbral — ideal para siluetas/logos de un solo trazo.</div>
+      </div>
+
+      <div class="group alter">
+        <h3>⟡ Alteración orgánica</h3>
+        <div class="field">
+          <label><span class="txt">Ruido de tamaño</span><input class="val" id="v-i_jsize" type="number"><span class="unit">%</span></label>
+          <input type="range" id="i_jsize" min="0" max="60" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Ruido de posición</span><input class="val" id="v-i_jpos" type="number"><span class="unit">mm</span></label>
+          <input type="range" id="i_jpos" min="0" max="30" value="0" step="1">
+        </div>
+        <div class="field">
+          <label><span class="txt">Omitir al azar</span><input class="val" id="v-i_skip" type="number"><span class="unit">%</span></label>
+          <input type="range" id="i_skip" min="0" max="70" value="0" step="1">
+        </div>
+        <div class="seedrow">
+          <input class="wide" id="i_seed" type="number" value="42">
+          <button class="dice" data-seed="i_seed" title="Nueva semilla">🎲</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIEZAS ESTÁNDAR: bridas, atiesadores, placas -->
+    <div class="panel-controls" id="ctrl-estandar" style="display:none">
+      <div class="group">
+        <h3>Tipo de pieza</h3>
+        <div class="field">
+          <select id="e_type">
+            <option value="brida">Brida circular (flange)</option>
+            <option value="atiesador">Atiesador / cartela</option>
+            <option value="placa">Placa base con pernos</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- BRIDA -->
+      <div id="wrap-e-brida">
+        <div class="group">
+          <h3>Brida circular</h3>
+          <div class="field">
+            <label><span class="txt">Diámetro exterior</span><input class="val" id="v-e_b_od" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_b_od" min="50" max="1500" value="200" step="5">
+          </div>
+          <label class="chk"><input type="checkbox" id="e_b_bore" checked> Perforación central (bore)</label>
+          <div class="field" id="wrap-e_b_bored">
+            <label><span class="txt">Ø bore central</span><input class="val" id="v-e_b_bored" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_b_bored" min="5" max="500" value="50" step="1">
+          </div>
+          <label class="chk"><input type="checkbox" id="e_b_outer" checked> Contorno exterior (círculo de corte)</label>
+        </div>
+        <div class="group">
+          <h3>Círculo de pernos (BCD)</h3>
+          <div class="field">
+            <label><span class="txt">Ø circunferencia de pernos</span><input class="val" id="v-e_b_bcd" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_b_bcd" min="40" max="1400" value="160" step="2">
+          </div>
+          <div class="field">
+            <label><span class="txt">Cantidad de pernos</span><input class="val" id="v-e_b_n" type="number"></label>
+            <input type="range" id="e_b_n" min="3" max="24" value="8" step="1">
+          </div>
+          <div class="field">
+            <label><span class="txt">Ø perforación de pernos</span><input class="val" id="v-e_b_hd" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_b_hd" min="3" max="50" value="12" step="1">
+          </div>
+          <div class="field">
+            <label><span class="txt">Rotación del patrón</span><input class="val" id="v-e_b_rot" type="number"><span class="unit">°</span></label>
+            <input type="range" id="e_b_rot" min="0" max="360" value="0" step="1">
+          </div>
+          <div class="hint">Cotas paramétricas de referencia. Para bridas de presión, verifica siempre Ø, BCD, cantidad y Ø de pernos contra la norma aplicable (ASME B16.5, DIN, NCh) antes de fabricar.</div>
+        </div>
+      </div>
+
+      <!-- ATIESADOR / CARTELA -->
+      <div id="wrap-e-atiesador" style="display:none">
+        <div class="group">
+          <h3>Atiesador / cartela</h3>
+          <div class="row2">
+            <div class="field"><label><span class="txt">Cateto base</span><input class="val" id="v-e_a_w" type="number"><span class="unit">mm</span></label>
+              <input type="range" id="e_a_w" min="30" max="1000" value="150" step="5"></div>
+            <div class="field"><label><span class="txt">Cateto altura</span><input class="val" id="v-e_a_h" type="number"><span class="unit">mm</span></label>
+              <input type="range" id="e_a_h" min="30" max="1000" value="150" step="5"></div>
+          </div>
+          <div class="field">
+            <label><span class="txt">Achaflanado vértice recto</span><input class="val" id="v-e_a_clipa" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_a_clipa" min="0" max="100" value="10" step="1">
+          </div>
+          <div class="field">
+            <label><span class="txt">Achaflanado vértices agudos</span><input class="val" id="v-e_a_clip2" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_a_clip2" min="0" max="150" value="20" step="1">
+          </div>
+        </div>
+        <div class="group">
+          <h3>Perforaciones de fijación</h3>
+          <label class="chk"><input type="checkbox" id="e_a_holes" checked> Agregar perforaciones en los catetos</label>
+          <div id="wrap-e_a_holefields">
+            <div class="field">
+              <label><span class="txt">Perforaciones por cateto</span><input class="val" id="v-e_a_hn" type="number"></label>
+              <input type="range" id="e_a_hn" min="1" max="10" value="2" step="1">
+            </div>
+            <div class="field">
+              <label><span class="txt">Ø perforación</span><input class="val" id="v-e_a_hd" type="number"><span class="unit">mm</span></label>
+              <input type="range" id="e_a_hd" min="3" max="30" value="10" step="1">
+            </div>
+            <div class="field">
+              <label><span class="txt">Distancia al borde</span><input class="val" id="v-e_a_hedge" type="number"><span class="unit">mm</span></label>
+              <input type="range" id="e_a_hedge" min="5" max="60" value="20" step="1">
+            </div>
+          </div>
+          <div class="hint">El vértice recto queda en el origen (esquina que suele soldarse a la unión); los catetos son los bordes de fijación. El achaflanado evita puntas vivas y facilita el acceso de soldadura.</div>
+        </div>
+      </div>
+
+      <!-- PLACA BASE -->
+      <div id="wrap-e-placa" style="display:none">
+        <div class="group">
+          <h3>Placa base</h3>
+          <div class="row2">
+            <div class="field"><label><span class="txt">Ancho</span><input class="val" id="v-e_p_w" type="number"><span class="unit">mm</span></label>
+              <input type="range" id="e_p_w" min="40" max="2000" value="200" step="5"></div>
+            <div class="field"><label><span class="txt">Alto</span><input class="val" id="v-e_p_h" type="number"><span class="unit">mm</span></label>
+              <input type="range" id="e_p_h" min="40" max="2000" value="200" step="5"></div>
+          </div>
+          <div class="field">
+            <label><span class="txt">Radio de esquina</span><input class="val" id="v-e_p_corner" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_p_corner" min="0" max="100" value="10" step="1">
+          </div>
+          <label class="chk"><input type="checkbox" id="e_p_frame" checked> Incluir contorno de placa en el corte</label>
+        </div>
+        <div class="group">
+          <h3>Patrón de pernos</h3>
+          <div class="field">
+            <label><span class="txt">Distancia perforación-borde</span><input class="val" id="v-e_p_edge" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_p_edge" min="5" max="100" value="20" step="1">
+          </div>
+          <div class="field">
+            <label><span class="txt">Ø perforación de pernos</span><input class="val" id="v-e_p_hd" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_p_hd" min="3" max="40" value="12" step="1">
+          </div>
+          <label class="chk"><input type="checkbox" id="e_p_extra"> Grilla intermedia (más de 4 pernos)</label>
+          <div class="row2" id="wrap-e_p_grid" style="display:none">
+            <div class="field"><label><span class="txt">Perforaciones en X</span><input class="val" id="v-e_p_nx" type="number"></label>
+              <input type="range" id="e_p_nx" min="2" max="10" value="2" step="1"></div>
+            <div class="field"><label><span class="txt">Perforaciones en Y</span><input class="val" id="v-e_p_ny" type="number"></label>
+              <input type="range" id="e_p_ny" min="2" max="10" value="2" step="1"></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="e_p_center"> Perforación central</label>
+          <div class="field" id="wrap-e_p_cd" style="display:none">
+            <label><span class="txt">Ø perforación central</span><input class="val" id="v-e_p_cd" type="number"><span class="unit">mm</span></label>
+            <input type="range" id="e_p_cd" min="3" max="200" value="30" step="1">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="canvas-wrap">
+      <canvas id="cv"></canvas>
+      <div id="dimLay"></div><div id="dimMsg"></div>
+      <div class="zoomhint">PELLIZCO: ZOOM &nbsp;·&nbsp; 1 DEDO: PANEO &nbsp;·&nbsp; DOBLE TAP: AJUSTAR</div>
+    </div>
+    <div class="footer">
+      <div class="stats">
+        <div>ENTIDADES<b id="s-count">0</b></div>
+        <div>LONG. DE CORTE<b id="s-length">0 mm</b></div>
+        <div>ÁREA PANEL<b id="s-area">0 × 0 mm</b></div>
+        <div>CAPAS<b>CORTE / CONTORNO</b></div>
+      </div>
+      <div class="actions">
+        <button class="iconbtn on" id="btn-dims" title="Mostrar u ocultar cotas (doble clic en una cota para editarla)">⟷</button>
+        <button class="iconbtn" id="btn-fit" title="Ajustar vista">⤢</button>
+        <button class="ghost" id="btn-random">↻ Variación aleatoria (estructura + ruido)</button>
+        <button class="export" id="btn-export">⬇ DESCARGAR DXF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CHANGELOG=[
+  {v:'1.7.0',t:'2026-10-02 09:55',c:['DRAFT v1.8.0: importar DXF con capas, bloques, arcos y conversión de unidades.']},
+  {v:'1.6.0',t:'2026-10-02 09:45',c:['DRAFT v1.7.0: panel de comandos solo con iconos; nombre al pasar el mouse.']},
+  {v:'1.5.0',t:'2026-10-02 09:35',c:['DRAFT v1.6.0: comandos en tarjetas Dibujo, Edición y Salida.']},
+  {v:'1.4.0',t:'2026-10-02 09:25',c:['DRAFT v1.5.0: simetría (mirror) con vista previa y opción de borrar el original.']},
+  {v:'1.3.0',t:'2026-10-02 09:15',c:['DRAFT v1.4.0 integrado: desfase, puntos medios, selección por ventana, menú del botón derecho, radios y vértices.']},
+  {v:'1.2.0',t:'2026-10-02 08:30',c:['DRAFT pasa a estar dentro de DXF LAB: modo GENERADORES / DRAFT en la barra y tarjeta en la pantalla de inicio. Al cambiar de modo no se pierde el dibujo.']},
+  {v:'1.1.0',t:'2026-10-02 08:20',c:['Cotas editables sobre el dibujo en todos los generadores: doble clic, escribes la medida y la pieza se regenera. El deslizador amplía su tope si hace falta.','Botón para mostrar u ocultar las cotas.']},
+  {v:'1.0.0',t:'2026-09-15 12:00',c:['Generadores paramétricos para corte CNC: mandala, biombo, panel perforado, gradiente, imagen y piezas estándar (brida, atiesador, placa base). Exportación DXF R12.']}
+];
+/* =========================================================
+   RNG CON SEMILLA (reproducible)
+   ========================================================= */
+function mulberry32(seed){
+  let a = seed >>> 0;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ a>>>15, 1 | a);
+    t = (t + Math.imul(t ^ t>>>7, 61 | t)) ^ t;
+    return ((t ^ t>>>14) >>> 0) / 4294967296;
+  };
+}
+function jitterVal(rng){ return rng()*2-1; } // -1..1
+
+/* =========================================================
+   UTILIDADES GEOMÉTRICAS
+   ========================================================= */
+const D2R = Math.PI/180;
+
+function rot(x,y,deg){
+  const a = deg*D2R, c=Math.cos(a), s=Math.sin(a);
+  return [x*c - y*s, x*s + y*c];
+}
+function placeLocal(cx,cy,angleDeg,radial,localX,localY){
+  const a = angleDeg*D2R, c=Math.cos(a), s=Math.sin(a);
+  const rx = radial + localX, ry = localY;
+  return [cx + rx*c - ry*s, cy + rx*s + ry*c];
+}
+
+function polygonPoints(shape, size, cx, cy, rotation=0, rng=null){
+  const pts = [];
+  if(shape==='circle'){
+    const r=size/2, n=32;
+    for(let i=0;i<n;i++){ const a=i/n*360; const [x,y]=rot(r,0,a+rotation); pts.push([cx+x,cy+y]); }
+  } else if(shape==='square'){
+    const h=size/2;
+    [[-h,-h],[h,-h],[h,h],[-h,h]].forEach(([x,y])=>{ const [rx,ry]=rot(x,y,rotation); pts.push([cx+rx,cy+ry]); });
+  } else if(shape==='diamond'){
+    const h=size/2;
+    [[0,h],[h,0],[0,-h],[-h,0]].forEach(([x,y])=>{ const [rx,ry]=rot(x,y,rotation); pts.push([cx+rx,cy+ry]); });
+  } else if(shape==='hex'){
+    const r=size/2;
+    for(let k=0;k<6;k++){ const a=60*k+30+rotation; const [x,y]=rot(r,0,a); pts.push([cx+x,cy+y]); }
+  }
+  return pts;
+}
+
+/* =========================================================
+   GENERADORES DE PATRÓN
+   ========================================================= */
+
+function genMandala(p){
+  const ents = [];
+  const rng = mulberry32(p.seed);
+  const D = p.d, R = D/2;
+  const innerR = R * (p.ir/100);
+  const outerR = R;
+  const ringGap = p.rings>0 ? (outerR-innerR)/p.rings : 0;
+
+  for(let ri=0; ri<p.rings; ri++){
+    const ringR = innerR + ringGap*(ri+0.5);
+    let sizeFactor = 1;
+    if(p.taper==='out') sizeFactor = 0.5 + 0.9*(ri/Math.max(1,p.rings-1));
+    if(p.taper==='in')  sizeFactor = 0.5 + 0.9*(1 - ri/Math.max(1,p.rings-1));
+    const baseL = ringGap * (p.size/100) * sizeFactor;
+    const offset = (p.alt && ri%2===1) ? (180/p.n) : 0;
+
+    for(let k=0;k<p.n;k++){
+      if(p.skip>0 && rng()*100 < p.skip) continue;
+      const angle = k*(360/p.n) + offset + jitterVal(rng)*p.jangle;
+      const ringRj = ringR + jitterVal(rng)*p.jrad;
+      const sizeJ = 1 + jitterVal(rng)*(p.jsize/100);
+      const L = collisionSafeSize(baseL * sizeJ, ringGap * 0.7, 0.7);
+      const W = L * (p.aspect/100);
+
+      if(p.motif==='linea'){
+        const [x1,y1] = placeLocal(R,R,angle, ringRj-L/2, 0,0);
+        const [x2,y2] = placeLocal(R,R,angle, ringRj+L/2, 0,0);
+        ents.push({type:'line',layer:'CORTE',x1,y1,x2,y2});
+      } else if(p.motif==='arco'){
+        const [cx,cy] = placeLocal(R,R,angle, ringRj, 0,0);
+        const span = Math.min(150, 360/p.n*0.8);
+        ents.push({type:'arc',layer:'CORTE',cx,cy,r:L/2,a1:angle+90-span/2,a2:angle+90+span/2});
+      } else {
+        let pts;
+        if(p.motif==='petal'){
+          pts=[];
+          const n=14;
+          for(let i=0;i<=n;i++){ const t=i/n; pts.push([t*L, (W/2)*Math.sin(Math.PI*t)]); }
+          for(let i=n;i>=0;i--){ const t=i/n; pts.push([t*L, -(W/2)*Math.sin(Math.PI*t)]); }
+        } else if(p.motif==='diamond'){
+          pts=[[0,0],[L*0.5,W/2],[L,0],[L*0.5,-W/2]];
+        } else { // gota
+          pts=[];
+          const n=14;
+          for(let i=0;i<=n;i++){ const t=i/n; pts.push([t*L, (W/2)*Math.sin(Math.PI*t)*t]); }
+          for(let i=n;i>=0;i--){ const t=i/n; pts.push([t*L, -(W/2)*Math.sin(Math.PI*t)*t]); }
+        }
+        const world = pts.map(([lx,ly])=>placeLocal(R,R,angle, ringRj-L/2, lx, ly));
+        ents.push({type:'poly',layer:'CORTE',pts:world,closed:true});
+      }
+    }
+  }
+
+  if(p.hole && p.holed>0){
+    ents.push({type:'circle',layer:'CORTE',cx:R,cy:R,r:p.holed/2});
+  }
+  if(p.outer){
+    ents.push({type:'circle',layer:'CONTORNO',cx:R,cy:R,r:outerR});
+  }
+  return {entities:ents, bbox:{w:D,h:D}};
+}
+
+function genBiombo(p){
+  const ents = [];
+  const rng = mulberry32(p.seed);
+  const W=p.w, H=p.h, m=p.margin;
+  const x0=m, x1=W-m, y0=m, y1=H-m;
+
+  if(p.type==='hex' || p.type==='diamond'){
+    const r = p.cell/2;
+    const rr0 = Math.max(1, r - p.gap/2);
+    const dx = p.type==='hex' ? r*Math.sqrt(3) : p.cell;
+    const dy = p.type==='hex' ? r*1.5 : p.cell;
+    let row=0;
+    for(let cy=y0+r; cy<=y1-r; cy+=dy, row++){
+      const rowOffset = (row%2===1) ? dx/2 : 0;
+      for(let cx=x0+r+rowOffset; cx<=x1-r; cx+=dx){
+        if(p.skip>0 && rng()*100 < p.skip) continue;
+        const jx = cx + jitterVal(rng)*p.jpos;
+        const jy = cy + jitterVal(rng)*p.jpos;
+        const rr = collisionSafeSize(rr0 * (1 + jitterVal(rng)*(p.jsize/100)), Math.max(1, p.cell*0.7), 0.7);
+        ents.push({type:'poly',layer:'CORTE',pts:polygonPoints(p.type,Math.max(1,rr)*2,jx,jy),closed:true});
+      }
+    }
+  } else if(p.type==='wave'){
+    const rowPitch = p.cell;
+    const baseSlotW = Math.max(2, p.cell - p.gap);
+    let row=0;
+    for(let cy=y0+rowPitch/2; cy<=y1-rowPitch/2; cy+=rowPitch, row++){
+      if(p.skip>0 && rng()*100 < p.skip) continue;
+      const rowY = cy + jitterVal(rng)*p.jpos;
+      const slotW = Math.max(1.5, collisionSafeSize(baseSlotW * (1 + jitterVal(rng)*(p.jsize/100)), Math.max(1, rowPitch*0.7), 0.7));
+      const phase = (row%2===1) ? Math.PI : 0;
+      const top=[], bottom=[];
+      const steps = Math.max(8, Math.round((x1-x0)/6));
+      for(let i=0;i<=steps;i++){
+        const x = x0 + (x1-x0)*i/steps;
+        const wobble = p.amp * Math.sin(2*Math.PI*x/p.wl + phase);
+        top.push([x, rowY + slotW/2 + wobble]);
+      }
+      for(let i=steps;i>=0;i--){
+        const x = x0 + (x1-x0)*i/steps;
+        const wobble = p.amp * Math.sin(2*Math.PI*x/p.wl + phase);
+        bottom.push([x, rowY - slotW/2 + wobble]);
+      }
+      ents.push({type:'poly',layer:'CORTE',pts:top.concat(bottom),closed:true});
+    }
+  }
+
+  if(p.frame){
+    ents.push({type:'poly',layer:'CONTORNO',pts:[[0,0],[W,0],[W,H],[0,H]],closed:true});
+  }
+  return {entities:ents, bbox:{w:W,h:H}};
+}
+
+function genPerforado(p){
+  const ents=[];
+  const rng = mulberry32(p.seed);
+  const W=p.w,H=p.h,m=p.margin;
+  const x0=m,x1=W-m,y0=m,y1=H-m;
+  let row=0;
+  for(let cy=y0+p.pitch/2; cy<=y1-p.pitch/2 || (y1-y0)<p.pitch; cy+=p.pitch, row++){
+    if(cy>y1) break;
+    const offset = (p.stagger && row%2===1) ? p.pitch/2 : 0;
+    for(let cx=x0+p.pitch/2+offset; cx<=x1-p.pitch/2 || false; cx+=p.pitch){
+      if(cx>x1) break;
+      if(p.skip>0 && rng()*100 < p.skip) continue;
+      const jx = cx + jitterVal(rng)*p.jpos;
+      const jy = cy + jitterVal(rng)*p.jpos;
+      const size = Math.max(0.3, collisionSafeSize(p.size * (1 + jitterVal(rng)*(p.jsize/100)), Math.max(1, p.pitch*0.7), 0.7));
+      if(p.shape==='circle'){
+        ents.push({type:'circle',layer:'CORTE',cx:jx,cy:jy,r:size/2});
+      } else {
+        ents.push({type:'poly',layer:'CORTE',pts:polygonPoints(p.shape,size,jx,jy,0,rng),closed:true});
+      }
+    }
+  }
+  if(p.frame){
+    ents.push({type:'poly',layer:'CONTORNO',pts:[[0,0],[W,0],[W,H],[0,H]],closed:true});
+  }
+  return {entities:ents, bbox:{w:W,h:H}};
+}
+
+function genGradiente(p){
+  const ents=[];
+  const rng = mulberry32(p.seed);
+  const W=p.w,H=p.h,m=p.margin;
+  const x0=m,x1=W-m,y0=m,y1=H-m;
+  const cx0=W/2, cy0=H/2;
+  const a = p.angle*D2R, dirx=Math.cos(a), diry=Math.sin(a);
+  const corners=[[0,0],[W,0],[W,H],[0,H]];
+  let projMin=Infinity, projMax=-Infinity;
+  corners.forEach(([x,y])=>{ const pr=(x-cx0)*dirx+(y-cy0)*diry; projMin=Math.min(projMin,pr); projMax=Math.max(projMax,pr); });
+  const maxDist = Math.hypot(W/2,H/2);
+
+  let row=0;
+  for(let cy=y0+p.pitch/2; cy<=y1-p.pitch/2 || (y1-y0)<p.pitch; cy+=p.pitch, row++){
+    if(cy>y1) break;
+    const offset = (p.stagger && row%2===1) ? p.pitch/2 : 0;
+    for(let cx=x0+p.pitch/2+offset; cx<=x1-p.pitch/2 || false; cx+=p.pitch){
+      if(cx>x1) break;
+      if(p.skip>0 && rng()*100 < p.skip) continue;
+      let t;
+      if(p.mode==='radial'){
+        t = Math.hypot(cx-cx0, cy-cy0) / maxDist;
+      } else {
+        const pr = (cx-cx0)*dirx + (cy-cy0)*diry;
+        t = (pr - projMin) / (projMax - projMin || 1);
+      }
+      t = Math.min(1, Math.max(0, t));
+      if(p.invert) t = 1-t;
+      t = Math.pow(t, p.gamma);
+      let size = p.min + t*(p.max-p.min);
+      size *= (1 + jitterVal(rng)*(p.jsize/100));
+      size = Math.max(0.3, collisionSafeSize(size, Math.max(1, p.pitch*0.7), 0.7));
+      const jx = cx + jitterVal(rng)*p.jpos;
+      const jy = cy + jitterVal(rng)*p.jpos;
+      if(size < 0.3) continue;
+      if(p.shape==='circle'){
+        ents.push({type:'circle',layer:'CORTE',cx:jx,cy:jy,r:size/2});
+      } else {
+        ents.push({type:'poly',layer:'CORTE',pts:polygonPoints(p.shape,size,jx,jy,0,rng),closed:true});
+      }
+    }
+  }
+  if(p.frame){
+    ents.push({type:'poly',layer:'CONTORNO',pts:[[0,0],[W,0],[W,H],[0,H]],closed:true});
+  }
+  return {entities:ents, bbox:{w:W,h:H}};
+}
+
+/* =========================================================
+   IMAGEN -> MALLA PERFORADA
+   ========================================================= */
+let sourceImage = null; // {width,height,data:Uint8ClampedArray}
+
+function loadImageFile(file){
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxDim = 600;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width*scale));
+      const h = Math.max(1, Math.round(img.height*scale));
+      const off = document.createElement('canvas');
+      off.width = w; off.height = h;
+      const octx = off.getContext('2d');
+      octx.drawImage(img, 0, 0, w, h);
+      const data = octx.getImageData(0,0,w,h).data;
+      sourceImage = {width:w, height:h, data, aspect: img.width/img.height};
+
+      const prevWrap = document.getElementById('i_preview_wrap');
+      const prev = document.getElementById('i_preview');
+      prev.width = w; prev.height = h;
+      prev.getContext('2d').drawImage(off, 0, 0);
+      prevWrap.style.display = 'block';
+      document.getElementById('i_status').textContent =
+        `Imagen cargada: ${img.width}×${img.height}px. Ajusta pitch y umbral según el nivel de detalle que necesites.`;
+
+      if(activeTab==='imagen') regenerate();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function sampleLuminance(u, v){
+  // u,v en [0,1], origen (0,0) abajo-izquierda como el panel DXF
+  if(!sourceImage) return 1;
+  const px = Math.min(sourceImage.width-1, Math.max(0, Math.floor(u*sourceImage.width)));
+  const py = Math.min(sourceImage.height-1, Math.max(0, Math.floor((1-v)*sourceImage.height)));
+  const idx = (py*sourceImage.width + px)*4;
+  const r = sourceImage.data[idx], g = sourceImage.data[idx+1], b = sourceImage.data[idx+2];
+  return (0.299*r + 0.587*g + 0.114*b) / 255; // 0=negro, 1=blanco
+}
+
+function genImagen(p){
+  const ents=[];
+  if(!sourceImage){
+    if(p.frame) ents.push({type:'poly',layer:'CONTORNO',pts:[[0,0],[p.w,0],[p.w,p.h],[0,p.h]],closed:true});
+    return {entities:ents, bbox:{w:p.w,h:p.h}};
+  }
+  const rng = mulberry32(p.seed);
+  const W=p.w,H=p.h,m=p.margin;
+  const x0=m,x1=W-m,y0=m,y1=H-m;
+  const thr = p.threshold/100;
+
+  let row=0;
+  for(let cy=y0+p.pitch/2; cy<=y1-p.pitch/2 || (y1-y0)<p.pitch; cy+=p.pitch, row++){
+    if(cy>y1) break;
+    const offset = (p.stagger && row%2===1) ? p.pitch/2 : 0;
+    for(let cx=x0+p.pitch/2+offset; cx<=x1-p.pitch/2 || false; cx+=p.pitch){
+      if(cx>x1) break;
+      if(p.skip>0 && rng()*100 < p.skip) continue;
+
+      const u = (cx-x0)/(x1-x0 || 1);
+      const v = (cy-y0)/(y1-y0 || 1);
+      let lum = sampleLuminance(u,v); // 0 negro .. 1 blanco
+      let tone = p.invert ? lum : (1-lum); // tone: 0 claro .. 1 oscuro
+
+      if(p.bg && tone < (1-thr)*0.15) continue; // fondo muy claro, no perforar
+
+      let size;
+      if(p.mode==='stencil'){
+        if(tone < thr) continue;
+        size = p.fixed;
+      } else {
+        let t = Math.pow(Math.min(1,Math.max(0,tone)), p.gamma);
+        size = p.min + t*(p.max-p.min);
+      }
+      size *= (1 + jitterVal(rng)*(p.jsize/100));
+      size = Math.max(0.25, collisionSafeSize(size, Math.max(1, p.pitch*0.7), 0.7));
+      const jx = cx + jitterVal(rng)*p.jpos;
+      const jy = cy + jitterVal(rng)*p.jpos;
+      if(size < 0.25) continue;
+
+      if(p.shape==='circle'){
+        ents.push({type:'circle',layer:'CORTE',cx:jx,cy:jy,r:size/2});
+      } else {
+        ents.push({type:'poly',layer:'CORTE',pts:polygonPoints(p.shape,size,jx,jy,0,rng),closed:true});
+      }
+    }
+  }
+  if(p.frame){
+    ents.push({type:'poly',layer:'CONTORNO',pts:[[0,0],[W,0],[W,H],[0,H]],closed:true});
+  }
+  return {entities:ents, bbox:{w:W,h:H}};
+}
+
+/* =========================================================
+   ESCRITURA DXF (ASCII R12)
+   ========================================================= */
+/* =========================================================
+   PIEZAS ESTÁNDAR: bridas, atiesadores, placas
+   ========================================================= */
+function roundedRectPoints(w, h, r){
+  r = Math.max(0, Math.min(r, w/2, h/2));
+  if(r<=0.01) return [[0,0],[w,0],[w,h],[0,h]];
+  const pts = [];
+  const seg = 8;
+  const corners = [
+    {cx:w-r, cy:r,   a0:270, a1:360}, // inferior derecha
+    {cx:w-r, cy:h-r, a0:0,   a1:90},  // superior derecha
+    {cx:r,   cy:h-r, a0:90,  a1:180}, // superior izquierda
+    {cx:r,   cy:r,   a0:180, a1:270}, // inferior izquierda
+  ];
+  corners.forEach(c=>{
+    for(let i=0;i<=seg;i++){
+      const a = c.a0 + (c.a1-c.a0)*i/seg;
+      pts.push([c.cx + r*Math.cos(a*D2R), c.cy + r*Math.sin(a*D2R)]);
+    }
+  });
+  return pts;
+}
+
+function genBrida(p){
+  const ents = [];
+  const R = p.od/2;
+  if(p.bore && p.bored>0){
+    ents.push({type:'circle',layer:'CORTE',cx:R,cy:R,r:p.bored/2});
+  }
+  const bcr = p.bcd/2;
+  for(let i=0;i<p.n;i++){
+    const angle = p.rot + i*(360/p.n);
+    const cx = R + bcr*Math.cos(angle*D2R);
+    const cy = R + bcr*Math.sin(angle*D2R);
+    ents.push({type:'circle',layer:'CORTE',cx,cy,r:p.b_hd/2});
+  }
+  if(p.outer){
+    ents.push({type:'circle',layer:'CONTORNO',cx:R,cy:R,r:R});
+  }
+  return {entities:ents, bbox:{w:p.od,h:p.od}};
+}
+
+function genAtiesador(p){
+  const ents = [];
+  const w=p.a_w, h=p.a_h;
+  const clipA = Math.min(p.clipa, w*0.9, h*0.9);
+  const Lhyp = Math.hypot(w,h);
+  const ux = -w/Lhyp, uy = h/Lhyp; // unidad de B(w,0) hacia C(0,h)
+  const clip2 = Math.min(p.clip2, Lhyp*0.45);
+  const B = [w,0], C = [0,h];
+  const Bc = [B[0]+ux*clip2, B[1]+uy*clip2];
+  const Cc = [C[0]-ux*clip2, C[1]-uy*clip2];
+  const outline = [
+    [clipA,0], [Math.max(clipA,w-clip2),0], Bc, Cc,
+    [0,Math.max(clipA,h-clip2)], [0,clipA]
+  ];
+  ents.push({type:'poly',layer:'CORTE',pts:outline,closed:true});
+
+  if(p.holes){
+    const n = p.hn, e = p.hedge;
+    // perforaciones en el cateto base (paralelo a X, offset e en Y)
+    const x0 = clipA + e, x1 = Math.max(clipA,w-clip2) - e;
+    for(let i=0;i<n;i++){
+      const t = n===1 ? 0.5 : i/(n-1);
+      const x = x0 + (x1-x0)*t;
+      if(x>0 && x<w) ents.push({type:'circle',layer:'CORTE',cx:x,cy:e,r:p.a_hd/2});
+    }
+    // perforaciones en el cateto altura (paralelo a Y, offset e en X)
+    const y0 = clipA + e, y1 = Math.max(clipA,h-clip2) - e;
+    for(let i=0;i<n;i++){
+      const t = n===1 ? 0.5 : i/(n-1);
+      const y = y0 + (y1-y0)*t;
+      if(y>0 && y<h) ents.push({type:'circle',layer:'CORTE',cx:e,cy:y,r:p.a_hd/2});
+    }
+  }
+  return {entities:ents, bbox:{w,h}};
+}
+
+function genPlaca(p){
+  const ents = [];
+  const W=p.p_w, H=p.p_h, e=p.edge;
+  if(p.frame){
+    ents.push({type:'poly',layer:'CONTORNO',pts:roundedRectPoints(W,H,p.corner),closed:true});
+  }
+  const nx = p.extra ? Math.max(2,p.nx) : 2;
+  const ny = p.extra ? Math.max(2,p.ny) : 2;
+  for(let iy=0; iy<ny; iy++){
+    const y = ny===1 ? H/2 : e + (H-2*e)*iy/(ny-1);
+    for(let ix=0; ix<nx; ix++){
+      const x = nx===1 ? W/2 : e + (W-2*e)*ix/(nx-1);
+      ents.push({type:'circle',layer:'CORTE',cx:x,cy:y,r:p.p_hd/2});
+    }
+  }
+  if(p.center && p.cd>0){
+    ents.push({type:'circle',layer:'CORTE',cx:W/2,cy:H/2,r:p.cd/2});
+  }
+  return {entities:ents, bbox:{w:W,h:H}};
+}
+
+function genEstandar(p){
+  if(p.type==='brida') return genBrida(p);
+  if(p.type==='atiesador') return genAtiesador(p);
+  return genPlaca(p);
+}
+
+function num(n){ return Number(n).toFixed(4); }
+
+function entityToDXF(e){
+  const L=[];
+  if(e.type==='line'){
+    L.push('0','LINE','8',e.layer,'10',num(e.x1),'20',num(e.y1),'30','0','11',num(e.x2),'21',num(e.y2),'31','0');
+  } else if(e.type==='circle'){
+    L.push('0','CIRCLE','8',e.layer,'10',num(e.cx),'20',num(e.cy),'30','0','40',num(e.r));
+  } else if(e.type==='arc'){
+    L.push('0','ARC','8',e.layer,'10',num(e.cx),'20',num(e.cy),'30','0','40',num(e.r),'50',num(e.a1),'51',num(e.a2));
+  } else if(e.type==='poly'){
+    // POLYLINE clásico (no LWPOLYLINE): compatible con cualquier lector DXF, sin
+    // requerir marcadores de subclase (100 AcDbPolyline) que muchos parsers exigen.
+    L.push('0','POLYLINE','8',e.layer,'66','1','70',e.closed?'1':'0');
+    e.pts.forEach(([x,y])=>{
+      L.push('0','VERTEX','8',e.layer,'10',num(x),'20',num(y),'30','0');
+    });
+    L.push('0','SEQEND','8',e.layer);
+  }
+  return L.join('\n');
+}
+
+function generateDXF(entities){
+  const header = [
+    '0','SECTION','2','HEADER',
+    '9','$ACADVER','1','AC1009',
+    '9','$INSUNITS','70','4',
+    '9','$MEASUREMENT','70','1',
+    '0','ENDSEC'
+  ].join('\n');
+
+  const tables = [
+    '0','SECTION','2','TABLES',
+    '0','TABLE','2','LAYER','70','2',
+    '0','LAYER','2','CORTE','70','0','62','4','6','CONTINUOUS',
+    '0','LAYER','2','CONTORNO','70','0','62','30','6','CONTINUOUS',
+    '0','ENDTAB',
+    '0','ENDSEC'
+  ].join('\n');
+
+  const bodyParts = entities.map(entityToDXF).filter(Boolean);
+  const entSecParts = ['0','SECTION','2','ENTITIES', ...bodyParts, '0','ENDSEC'];
+  const entSec = entSecParts.join('\n');
+
+  const full = [header, tables, entSec, '0','EOF'].join('\n');
+  return full.replace(/\r?\n/g, '\r\n'); // CRLF: máxima compatibilidad con lectores CAD estrictos
+}
+
+/* =========================================================
+   LONGITUD DE CORTE ESTIMADA
+   ========================================================= */
+function entityLength(e){
+  if(e.type==='line') return Math.hypot(e.x2-e.x1, e.y2-e.y1);
+  if(e.type==='circle') return 2*Math.PI*e.r;
+  if(e.type==='arc') return e.r*Math.abs(e.a2-e.a1)*D2R;
+  if(e.type==='poly'){
+    let s=0;
+    for(let i=0;i<e.pts.length-1;i++) s+=Math.hypot(e.pts[i+1][0]-e.pts[i][0], e.pts[i+1][1]-e.pts[i][1]);
+    if(e.closed) s+=Math.hypot(e.pts[0][0]-e.pts[e.pts.length-1][0], e.pts[0][1]-e.pts[e.pts.length-1][1]);
+    return s;
+  }
+  return 0;
+}
+
+/* =========================================================
+   RENDER CANVAS
+   ========================================================= */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+function resizeCanvas(){
+  const rect = cv.parentElement.getBoundingClientRect();
+  cv.width = rect.width * devicePixelRatio;
+  cv.height = rect.height * devicePixelRatio;
+  cv.style.width = rect.width+'px';
+  cv.style.height = rect.height+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+
+let current = {entities:[], bbox:{w:100,h:100}};
+
+/* ---- estado de vista: zoom (multiplicador sobre el ajuste automático) y paneo en px ---- */
+let view = {scale:1, panX:0, panY:0};
+function resetView(){ view.scale=1; view.panX=0; view.panY=0; }
+
+function getBaseScale(){
+  const rect = cv.parentElement.getBoundingClientRect();
+  const {w,h} = current.bbox;
+  const pad=40;
+  return Math.min((rect.width-pad*2)/Math.max(w,1e-6), (rect.height-pad*2)/Math.max(h,1e-6));
+}
+function getTransform(){
+  const rect = cv.parentElement.getBoundingClientRect();
+  const cw=rect.width, ch=rect.height;
+  const {w,h} = current.bbox;
+  const scale = getBaseScale()*view.scale;
+  const offX = (cw - w*scale)/2 + view.panX;
+  const offY = (ch - h*scale)/2 + view.panY;
+  return {cw,ch,scale,offX,offY,w,h};
+}
+function screenToWorld(sx,sy){
+  const t = getTransform();
+  return {x:(sx-t.offX)/t.scale, y:(t.ch-sy-t.offY)/t.scale};
+}
+/* recalcula panX/panY para que el punto 'anchor' (coords de pieza) quede fijo bajo (sx,sy) en pantalla */
+function anchorViewTo(anchor, sx, sy){
+  const rect = cv.parentElement.getBoundingClientRect();
+  const cw=rect.width, ch=rect.height;
+  const {w,h} = current.bbox;
+  const scale = getBaseScale()*view.scale;
+  view.panX = sx - anchor.x*scale - (cw - w*scale)/2;
+  view.panY = ch - sy - anchor.y*scale - (ch - h*scale)/2;
+}
+
+function draw(){
+  const t = getTransform();
+  const {cw,ch,scale,offX,offY,w,h} = t;
+  ctx.clearRect(0,0,cw,ch);
+
+  const tx = (x)=> offX + x*scale;
+  const ty = (y)=> ch - offY - y*scale;
+
+  ctx.strokeStyle = '#141a20';
+  ctx.lineWidth = 1;
+  const gridStep = 50;
+  ctx.beginPath();
+  for(let gx=0; gx<=w; gx+=gridStep){ ctx.moveTo(tx(gx), ty(0)); ctx.lineTo(tx(gx), ty(h)); }
+  for(let gy=0; gy<=h; gy+=gridStep){ ctx.moveTo(tx(0), ty(gy)); ctx.lineTo(tx(w), ty(gy)); }
+  ctx.stroke();
+
+  current.entities.forEach(e=>{
+    ctx.strokeStyle = e.layer==='CONTORNO' ? '#ffb454' : '#4fd8e8';
+    ctx.lineWidth = e.layer==='CONTORNO' ? 1.4 : 1.1;
+    ctx.setLineDash(e.layer==='CONTORNO' ? [6,4] : []);
+    if(e.type==='line'){
+      ctx.beginPath(); ctx.moveTo(tx(e.x1),ty(e.y1)); ctx.lineTo(tx(e.x2),ty(e.y2)); ctx.stroke();
+    } else if(e.type==='circle'){
+      ctx.beginPath(); ctx.arc(tx(e.cx),ty(e.cy), e.r*scale, 0, Math.PI*2); ctx.stroke();
+    } else if(e.type==='arc'){
+      ctx.beginPath(); ctx.arc(tx(e.cx),ty(e.cy), e.r*scale, -e.a1*D2R, -e.a2*D2R, true); ctx.stroke();
+    } else if(e.type==='poly'){
+      ctx.beginPath();
+      e.pts.forEach(([x,y],i)=>{ if(i===0) ctx.moveTo(tx(x),ty(y)); else ctx.lineTo(tx(x),ty(y)); });
+      if(e.closed) ctx.closePath();
+      ctx.stroke();
+    }
+  });
+  ctx.setLineDash([]);
+
+  drawDims(t, tx, ty);
+
+  if(activeTab==='imagen' && !sourceImage){
+    ctx.fillStyle = '#6f8891';
+    ctx.font = '12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Carga una imagen en el panel izquierdo para generar el mallado', cw/2, ch/2);
+    ctx.textAlign = 'left';
+  }
+}
+
+/* =========================================================
+   ZOOM / PANEO — táctil (móvil) y mouse (escritorio)
+   ========================================================= */
+let touchState = null;
+let lastTapTime = 0;
+
+cv.addEventListener('touchstart', e=>{
+  const rect = cv.getBoundingClientRect();
+  if(e.touches.length===1){
+    const now = Date.now();
+    const t0 = e.touches[0];
+    if(now - lastTapTime < 320){
+      resetView(); draw(); lastTapTime = 0;
+    } else {
+      lastTapTime = now;
+      touchState = {mode:'pan', lastX:t0.clientX, lastY:t0.clientY};
+    }
+  } else if(e.touches.length===2){
+    const [t1,t2] = e.touches;
+    const dist = Math.hypot(t2.clientX-t1.clientX, t2.clientY-t1.clientY);
+    const midX = (t1.clientX+t2.clientX)/2 - rect.left;
+    const midY = (t1.clientY+t2.clientY)/2 - rect.top;
+    touchState = {mode:'pinch', startDist:Math.max(dist,1), startScale:view.scale, anchor:screenToWorld(midX,midY)};
+  }
+  e.preventDefault();
+}, {passive:false});
+
+cv.addEventListener('touchmove', e=>{
+  if(!touchState) return;
+  const rect = cv.getBoundingClientRect();
+  if(touchState.mode==='pan' && e.touches.length===1){
+    const t0 = e.touches[0];
+    const dx = t0.clientX - touchState.lastX;
+    const dy = t0.clientY - touchState.lastY;
+    view.panX += dx; view.panY -= dy;
+    touchState.lastX = t0.clientX; touchState.lastY = t0.clientY;
+    draw();
+  } else if(touchState.mode==='pinch' && e.touches.length===2){
+    const [t1,t2] = e.touches;
+    const dist = Math.hypot(t2.clientX-t1.clientX, t2.clientY-t1.clientY);
+    const midX = (t1.clientX+t2.clientX)/2 - rect.left;
+    const midY = (t1.clientY+t2.clientY)/2 - rect.top;
+    view.scale = Math.min(20, Math.max(0.15, touchState.startScale * (dist/touchState.startDist)));
+    anchorViewTo(touchState.anchor, midX, midY);
+    draw();
+  }
+  e.preventDefault();
+}, {passive:false});
+
+['touchend','touchcancel'].forEach(evt=>{
+  cv.addEventListener(evt, e=>{
+    if(e.touches.length===0) touchState=null;
+    else if(e.touches.length===1){
+      touchState = {mode:'pan', lastX:e.touches[0].clientX, lastY:e.touches[0].clientY};
+    }
+  });
+});
+
+/* mouse: rueda = zoom centrado en el cursor, arrastre = paneo */
+cv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const rect = cv.getBoundingClientRect();
+  const sx = e.clientX-rect.left, sy = e.clientY-rect.top;
+  const anchor = screenToWorld(sx,sy);
+  const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
+  view.scale = Math.min(20, Math.max(0.15, view.scale*factor));
+  anchorViewTo(anchor, sx, sy);
+  draw();
+}, {passive:false});
+
+let mouseDrag = null;
+cv.addEventListener('mousedown', e=>{ mouseDrag = {lastX:e.clientX, lastY:e.clientY}; });
+window.addEventListener('mousemove', e=>{
+  if(!mouseDrag) return;
+  view.panX += e.clientX - mouseDrag.lastX;
+  view.panY -= e.clientY - mouseDrag.lastY;
+  mouseDrag.lastX = e.clientX; mouseDrag.lastY = e.clientY;
+  draw();
+});
+window.addEventListener('mouseup', ()=>{ mouseDrag=null; });
+cv.addEventListener('dblclick', ()=>{ resetView(); draw(); });
+cv.style.cursor = 'grab';
+
+document.getElementById('btn-fit').addEventListener('click', ()=>{ resetView(); draw(); });
+
+
+/* =========================================================
+   COTAS SOBRE EL DIBUJO (doble clic para editar)
+   ========================================================= */
+let DIMS_ON = true;
+const V = id => +document.getElementById(id).value;
+const C = id => document.getElementById(id).checked;
+// cada cota: lineal {k:'lin', a, b, off(px, a la izquierda de a→b), id, lab}
+//            diámetro {k:'dia', c, r, ang, id, lab}
+function dimsFor(){
+  const L = [];
+  const lin = (a,b,off,id,lab,val) => L.push({k:'lin',a,b,off,id,lab,val:val==null?V(id):val});
+  const dia = (c,r,ang,id,lab,val) => L.push({k:'dia',c,r,ang,id,lab,val:val==null?V(id):val});
+  const panel = (pre) => {
+    const W=V(pre+'_w'), H=V(pre+'_h'), m=V(pre+'_margin');
+    lin([0,0],[W,0],-30,pre+'_w','L');
+    lin([0,H],[0,0],-30,pre+'_h','A');
+    if(m>0) lin([0,H],[m,H],18,pre+'_margin','MARGEN');
+    return {W,H,m};
+  };
+  if(activeTab==='mandala'){
+    const D=V('m_d'),R=D/2;
+    dia([R,R],R,35,'m_d','Ø');
+    if(C('m_hole')&&V('m_holed')>0) dia([R,R],V('m_holed')/2,-35,'m_holed','Ø');
+  } else if(activeTab==='biombo'){
+    panel('b');
+  } else if(activeTab==='perforado'){
+    const {W,H,m}=panel('p'),p=V('p_pitch'),x=m+p/2,y=m+p/2;
+    if(x+p<=W-m) lin([x,y],[x+p,y],-22,'p_pitch','PASO');
+    dia([x,y],V('p_size')/2,45,'p_size','Ø');
+  } else if(activeTab==='gradiente'){
+    const {W,H,m}=panel('g'),p=V('g_pitch'),x=m+p/2,y=m+p/2;
+    if(x+p<=W-m) lin([x,y],[x+p,y],-22,'g_pitch','PASO');
+  } else if(activeTab==='imagen'){
+    const {W,H,m}=panel('i'),p=V('i_pitch'),x=m+p/2,y=m+p/2;
+    if(x+p<=W-m) lin([x,y],[x+p,y],-22,'i_pitch','PASO');
+  } else if(activeTab==='estandar'){
+    const type=document.getElementById('e_type').value;
+    if(type==='brida'){
+      const R=V('e_b_od')/2,c=[R,R];
+      dia(c,R,30,'e_b_od','Ø EXT');
+      dia(c,V('e_b_bcd')/2,-60,'e_b_bcd','Ø PCD');
+      const a=V('e_b_rot')*Math.PI/180,bc=V('e_b_bcd')/2;
+      dia([R+bc*Math.cos(a),R+bc*Math.sin(a)],V('e_b_hd')/2,135,'e_b_hd','Ø');
+      if(C('e_b_bore')&&V('e_b_bored')>0) dia(c,V('e_b_bored')/2,-150,'e_b_bored','Ø');
+    } else if(type==='atiesador'){
+      const w=V('e_a_w'),h=V('e_a_h'),ca=Math.min(V('e_a_clipa'),w*0.9,h*0.9);
+      lin([0,0],[w,0],-30,'e_a_w','L');
+      lin([0,h],[0,0],-30,'e_a_h','A');
+      if(ca>0) lin([0,0],[ca,0],-14,'e_a_clipa','DESTAJE');
+      if(C('e_a_holes')){const e=V('e_a_hedge');lin([ca+e,0],[ca+e,e],18,'e_a_hedge','BORDE');}
+    } else {
+      const W=V('e_p_w'),H=V('e_p_h'),e=V('e_p_edge');
+      lin([0,0],[W,0],-30,'e_p_w','L');
+      lin([0,H],[0,0],-30,'e_p_h','A');
+      lin([0,H],[e,H],18,'e_p_edge','BORDE');
+      dia([e,e],V('e_p_hd')/2,45,'e_p_hd','Ø');
+      if(C('e_p_center')&&V('e_p_cd')>0) dia([W/2,H/2],V('e_p_cd')/2,45,'e_p_cd','Ø');
+      if(C('e_p_frame')&&V('e_p_corner')>0){const r=V('e_p_corner');L.push({k:'rad',c:[W-r,H-r],r,ang:45,id:'e_p_corner',lab:'R',val:r});}
+    }
+  }
+  return L;
+}
+const fmt2 = v => String(Math.round(v*100)/100).replace('.',',');
+function drawDims(t, tx, ty){
+  const lay = document.getElementById('dimLay');
+  lay.querySelectorAll('.dl').forEach(x=>x.remove());
+  if(!DIMS_ON || (activeTab==='imagen' && !sourceImage)) return;
+  const col='rgba(127,211,227,.9)', ext='rgba(127,211,227,.35)';
+  const arrow=(x,y,ux,uy)=>{const s=7;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+ux*s-uy*s*0.35,y+uy*s+ux*s*0.35);ctx.lineTo(x+ux*s+uy*s*0.35,y+uy*s-ux*s*0.35);ctx.closePath();ctx.fill();};
+  ctx.save(); ctx.lineWidth=1; ctx.fillStyle=col; ctx.setLineDash([]);
+  dimsFor().forEach(d=>{
+    let lx,ly;
+    if(d.k==='lin'){
+      const A=[tx(d.a[0]),ty(d.a[1])],B=[tx(d.b[0]),ty(d.b[1])],dx=B[0]-A[0],dy=B[1]-A[1],Ln=Math.hypot(dx,dy)||1,ux=dx/Ln,uy=dy/Ln;
+      // normal a la izquierda en pantalla (y hacia abajo)
+      const nx=uy,ny=-ux,o=d.off;
+      const A2=[A[0]+nx*o,A[1]+ny*o],B2=[B[0]+nx*o,B[1]+ny*o];
+      ctx.strokeStyle=ext;ctx.beginPath();ctx.moveTo(A[0]+nx*Math.sign(o)*3,A[1]+ny*Math.sign(o)*3);ctx.lineTo(A2[0]+nx*Math.sign(o)*5,A2[1]+ny*Math.sign(o)*5);
+      ctx.moveTo(B[0]+nx*Math.sign(o)*3,B[1]+ny*Math.sign(o)*3);ctx.lineTo(B2[0]+nx*Math.sign(o)*5,B2[1]+ny*Math.sign(o)*5);ctx.stroke();
+      ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(A2[0],A2[1]);ctx.lineTo(B2[0],B2[1]);ctx.stroke();
+      if(Ln>18){arrow(A2[0],A2[1],ux,uy);arrow(B2[0],B2[1],-ux,-uy);}
+      lx=(A2[0]+B2[0])/2;ly=(A2[1]+B2[1])/2;
+      if(Ln<70){lx+=nx*Math.sign(o)*14;ly+=ny*Math.sign(o)*14;}
+    } else {
+      const c=[tx(d.c[0]),ty(d.c[1])],r=d.r*t.scale,a=d.ang*Math.PI/180,ux=Math.cos(a),uy=-Math.sin(a);
+      ctx.strokeStyle=col;ctx.beginPath();
+      if(d.k==='dia'){
+        const p1=[c[0]-ux*r,c[1]-uy*r],p2=[c[0]+ux*r,c[1]+uy*r],tail=Math.max(26,r*0.25);
+        if(r>14){ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0]+ux*tail,p2[1]+uy*tail);ctx.stroke();arrow(p1[0],p1[1],ux,uy);arrow(p2[0],p2[1],-ux,-uy);lx=p2[0]+ux*(tail+18);ly=p2[1]+uy*(tail+10);}
+        else{ctx.moveTo(p2[0],p2[1]);ctx.lineTo(p2[0]+ux*30,p2[1]+uy*30);ctx.stroke();arrow(p2[0],p2[1],ux,uy);lx=p2[0]+ux*46;ly=p2[1]+uy*40;}
+      } else {
+        const p2=[c[0]+ux*r,c[1]+uy*r];ctx.moveTo(c[0],c[1]);ctx.lineTo(p2[0]+ux*24,p2[1]+uy*24);ctx.stroke();arrow(p2[0],p2[1],-ux,-uy);lx=p2[0]+ux*40;ly=p2[1]+uy*34;
+      }
+    }
+    const w=lay.clientWidth,h=lay.clientHeight;lx=Math.min(w-40,Math.max(40,lx));ly=Math.min(h-14,Math.max(14,ly));
+    const el=document.createElement('div');el.className='dl';el.dataset.id=d.id;el.title='Doble clic para editar';
+    el.innerHTML=`<small>${d.lab}</small>${fmt2(d.val)}`;el.style.left=lx+'px';el.style.top=ly+'px';lay.appendChild(el);
+  });
+  ctx.restore();
+}
+function dimMsg(txt){const m=document.getElementById('dimMsg');m.textContent=txt;clearTimeout(dimMsg.t);dimMsg.t=setTimeout(()=>m.textContent='',4000);}
+function dimEdit(el){
+  const id=el.dataset.id,range=document.getElementById(id),numEl=document.getElementById('v-'+id),lay=document.getElementById('dimLay');
+  const old=document.getElementById('dimIn');if(old)old.remove();
+  const inp=document.createElement('input');inp.id='dimIn';inp.type='number';inp.step='any';inp.value=range.value;
+  inp.style.left=(parseFloat(el.style.left)-48)+'px';inp.style.top=(parseFloat(el.style.top)-14)+'px';lay.appendChild(inp);inp.focus();inp.select();
+  let done=false;
+  const fin=ok=>{if(done)return;done=true;const v=parseFloat(String(inp.value).replace(',','.'));inp.remove();if(!ok||!isFinite(v))return;
+    const mn=parseFloat(range.min);if(v<mn){dimMsg('El mínimo es '+fmt2(mn)+' mm.');return;}
+    // si la medida pasa el tope del deslizador, se amplía el rango
+    if(v>parseFloat(range.max)){range.max=String(v);if(numEl)numEl.max=String(v);}
+    range.value=String(v);
+    if(numEl){const dec=(String(range.step).split('.')[1]||'').length;numEl.value=Number(range.value).toFixed(dec);}
+    regenerate();dimMsg('Cota aplicada: '+fmt2(+range.value)+' mm');};
+  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')fin(true);if(ev.key==='Escape')fin(false);ev.stopPropagation();});
+  inp.addEventListener('blur',()=>fin(true));
+  ['mousedown','touchstart','wheel','dblclick'].forEach(evn=>inp.addEventListener(evn,ev=>ev.stopPropagation(),{passive:true}));
+}
+const dimLay=document.getElementById('dimLay');
+dimLay.addEventListener('dblclick',e=>{const el=e.target.closest('.dl');if(el){e.preventDefault();e.stopPropagation();dimEdit(el);}});
+dimLay.addEventListener('click',e=>{const el=e.target.closest('.dl');if(el&&matchMedia('(pointer:coarse)').matches)dimEdit(el);});
+dimLay.addEventListener('mousedown',e=>{if(e.target.closest('.dl'))e.stopPropagation();});
+document.getElementById('btn-dims').addEventListener('click',()=>{DIMS_ON=!DIMS_ON;document.getElementById('btn-dims').classList.toggle('on',DIMS_ON);draw();});
+
+/* =========================================================
+   ENLACE SLIDER <-> CAMPO NUMÉRICO ESCRITO
+   ========================================================= */
+function bindRange(id, decimals=0){
+  const range = document.getElementById(id);
+  const numEl = document.getElementById('v-'+id);
+  numEl.min = range.min; numEl.max = range.max; numEl.step = range.step;
+  const fmt = v => Number(v).toFixed(decimals);
+  numEl.value = fmt(range.value);
+
+  range.addEventListener('input', ()=>{ numEl.value = fmt(range.value); regenerate(); });
+
+  const commit = ()=>{
+    let v = parseFloat(numEl.value);
+    if(isNaN(v)) v = parseFloat(range.value);
+    const min = parseFloat(range.min), max = parseFloat(range.max);
+    v = Math.min(max, Math.max(min, v));
+    range.value = v;
+    numEl.value = fmt(v);
+    regenerate();
+  };
+  numEl.addEventListener('change', commit);
+  numEl.addEventListener('keydown', e=>{ if(e.key==='Enter'){ commit(); numEl.blur(); } });
+}
+
+let activeTab = 'mandala';
+
+function clamp(v, min, max){ return Math.min(max, Math.max(min, v)); }
+function collisionSafeSize(size, minPitch, safety = 0.78){
+  const maxAllowed = Math.max(0.1, minPitch * safety);
+  return Math.min(size, maxAllowed);
+}
+
+function readMandalaParams(){
+  return {
+    d: +document.getElementById('m_d').value,
+    ir: +document.getElementById('m_ir').value,
+    hole: document.getElementById('m_hole').checked,
+    holed: +document.getElementById('m_holed').value,
+    outer: document.getElementById('m_outer').checked,
+    rings: +document.getElementById('m_rings').value,
+    n: +document.getElementById('m_n').value,
+    motif: document.getElementById('m_motif').value,
+    size: +document.getElementById('m_size').value,
+    aspect: +document.getElementById('m_aspect').value,
+    taper: document.getElementById('m_taper').value,
+    alt: document.getElementById('m_alt').checked,
+    jangle: +document.getElementById('m_jangle').value,
+    jsize: +document.getElementById('m_jsize').value,
+    jrad: +document.getElementById('m_jrad').value,
+    skip: +document.getElementById('m_skip').value,
+    seed: +document.getElementById('m_seed').value || 1,
+  };
+}
+function readBiomboParams(){
+  return {
+    w: +document.getElementById('b_w').value,
+    h: +document.getElementById('b_h').value,
+    margin: +document.getElementById('b_margin').value,
+    frame: document.getElementById('b_frame').checked,
+    type: document.getElementById('b_type').value,
+    cell: +document.getElementById('b_cell').value,
+    gap: +document.getElementById('b_gap').value,
+    amp: +document.getElementById('b_amp').value,
+    wl: +document.getElementById('b_wl').value,
+    jsize: +document.getElementById('b_jsize').value,
+    jpos: +document.getElementById('b_jpos').value,
+    skip: +document.getElementById('b_skip').value,
+    seed: +document.getElementById('b_seed').value || 1,
+  };
+}
+function readPerforadoParams(){
+  return {
+    w: +document.getElementById('p_w').value,
+    h: +document.getElementById('p_h').value,
+    margin: +document.getElementById('p_margin').value,
+    frame: document.getElementById('p_frame').checked,
+    shape: document.getElementById('p_shape').value,
+    size: +document.getElementById('p_size').value,
+    pitch: +document.getElementById('p_pitch').value,
+    stagger: document.getElementById('p_stagger').checked,
+    jsize: +document.getElementById('p_jsize').value,
+    jpos: +document.getElementById('p_jpos').value,
+    skip: +document.getElementById('p_skip').value,
+    seed: +document.getElementById('p_seed').value || 1,
+  };
+}
+function readGradienteParams(){
+  return {
+    w: +document.getElementById('g_w').value,
+    h: +document.getElementById('g_h').value,
+    margin: +document.getElementById('g_margin').value,
+    frame: document.getElementById('g_frame').checked,
+    shape: document.getElementById('g_shape').value,
+    mode: document.getElementById('g_mode').value,
+    angle: +document.getElementById('g_angle').value,
+    pitch: +document.getElementById('g_pitch').value,
+    min: +document.getElementById('g_min').value,
+    max: +document.getElementById('g_max').value,
+    gamma: +document.getElementById('g_gamma').value,
+    invert: document.getElementById('g_invert').checked,
+    stagger: document.getElementById('g_stagger').checked,
+    jsize: +document.getElementById('g_jsize').value,
+    jpos: +document.getElementById('g_jpos').value,
+    skip: +document.getElementById('g_skip').value,
+    seed: +document.getElementById('g_seed').value || 1,
+  };
+}
+function readImagenParams(){
+  return {
+    w: +document.getElementById('i_w').value,
+    h: +document.getElementById('i_h').value,
+    margin: +document.getElementById('i_margin').value,
+    frame: document.getElementById('i_frame').checked,
+    mode: document.getElementById('i_mode').value,
+    shape: document.getElementById('i_shape').value,
+    pitch: +document.getElementById('i_pitch').value,
+    min: +document.getElementById('i_min').value,
+    max: +document.getElementById('i_max').value,
+    fixed: +document.getElementById('i_fixed').value,
+    threshold: +document.getElementById('i_threshold').value,
+    gamma: +document.getElementById('i_gamma').value,
+    invert: document.getElementById('i_invert').checked,
+    stagger: document.getElementById('i_stagger').checked,
+    bg: document.getElementById('i_bg').checked,
+    jsize: +document.getElementById('i_jsize').value,
+    jpos: +document.getElementById('i_jpos').value,
+    skip: +document.getElementById('i_skip').value,
+    seed: +document.getElementById('i_seed').value || 1,
+  };
+}
+
+function readEstandarParams(){
+  return {
+    type: document.getElementById('e_type').value,
+    // brida
+    od: +document.getElementById('e_b_od').value,
+    bore: document.getElementById('e_b_bore').checked,
+    bored: +document.getElementById('e_b_bored').value,
+    outer: document.getElementById('e_b_outer').checked,
+    bcd: +document.getElementById('e_b_bcd').value,
+    n: +document.getElementById('e_b_n').value,
+    b_hd: +document.getElementById('e_b_hd').value,
+    rot: +document.getElementById('e_b_rot').value,
+    // atiesador
+    a_w: +document.getElementById('e_a_w').value,
+    a_h: +document.getElementById('e_a_h').value,
+    clipa: +document.getElementById('e_a_clipa').value,
+    clip2: +document.getElementById('e_a_clip2').value,
+    holes: document.getElementById('e_a_holes').checked,
+    hn: +document.getElementById('e_a_hn').value,
+    a_hd: +document.getElementById('e_a_hd').value,
+    hedge: +document.getElementById('e_a_hedge').value,
+    // placa
+    p_w: +document.getElementById('e_p_w').value,
+    p_h: +document.getElementById('e_p_h').value,
+    corner: +document.getElementById('e_p_corner').value,
+    frame: document.getElementById('e_p_frame').checked,
+    edge: +document.getElementById('e_p_edge').value,
+    p_hd: +document.getElementById('e_p_hd').value,
+    extra: document.getElementById('e_p_extra').checked,
+    nx: +document.getElementById('e_p_nx').value,
+    ny: +document.getElementById('e_p_ny').value,
+    center: document.getElementById('e_p_center').checked,
+    cd: +document.getElementById('e_p_cd').value,
+  };
+}
+
+function regenerate(){
+  let result;
+  if(activeTab==='mandala') result = genMandala(readMandalaParams());
+  else if(activeTab==='biombo') result = genBiombo(readBiomboParams());
+  else if(activeTab==='perforado') result = genPerforado(readPerforadoParams());
+  else if(activeTab==='gradiente') result = genGradiente(readGradienteParams());
+  else if(activeTab==='estandar') result = genEstandar(readEstandarParams());
+  else result = genImagen(readImagenParams());
+
+  current = result;
+  draw();
+
+  const totalLen = current.entities.reduce((s,e)=>s+entityLength(e),0);
+  document.getElementById('s-count').textContent = current.entities.length;
+  document.getElementById('s-length').textContent = (totalLen/1000).toFixed(2)+' m';
+  document.getElementById('s-area').textContent = `${current.bbox.w} × ${current.bbox.h} mm`;
+  if(activeTab==='imagen' && !sourceImage){
+    document.getElementById('s-count').textContent = '—';
+  }
+}
+
+/* =========================================================
+   TABS
+   ========================================================= */
+function selectTab(name){
+  activeTab = name;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.panel-controls').forEach(p=>p.style.display='none');
+  document.getElementById('ctrl-'+activeTab).style.display='block';
+  resetView();
+  regenerate();
+}
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=> selectTab(tab.dataset.tab));
+});
+
+/* pantalla de inicio: un botón por generador */
+/* ---------- DRAFT dentro de DXF LAB ---------- */
+let draftFrame = null;
+async function openDraft(){
+  document.body.classList.add('draft');
+  document.getElementById('m-draft').classList.add('on'); document.getElementById('m-gen').classList.remove('on');
+  if(draftFrame) return;
+  const b64 = document.getElementById('src-draft').textContent.trim();
+  const bin = Uint8Array.from(atob(b64), c=>c.charCodeAt(0));
+  const html = await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  draftFrame = document.createElement('iframe'); draftFrame.title = 'DRAFT';
+  draftFrame.setAttribute('allow','clipboard-write');
+  draftFrame.srcdoc = html.replace('<head>','<head><script>window.LAB_EMBED=1;<\/script>');
+  document.getElementById('draftView').appendChild(draftFrame);
+}
+function closeDraft(){
+  document.body.classList.remove('draft');
+  document.getElementById('m-gen').classList.add('on'); document.getElementById('m-draft').classList.remove('on');
+  resizeCanvas();
+}
+document.getElementById('m-draft').addEventListener('click', openDraft);
+document.getElementById('m-gen').addEventListener('click', closeDraft);
+
+document.querySelectorAll('.launch-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(btn.dataset.tab==='draft'){ openDraft(); document.getElementById('launcher').style.display = 'none'; return; }
+    closeDraft();
+    selectTab(btn.dataset.tab);
+    document.getElementById('launcher').style.display = 'none';
+  });
+});
+document.getElementById('btn-launcher').addEventListener('click', ()=>{
+  document.getElementById('launcher').style.display = 'flex';
+});
+
+document.getElementById('m_hole').addEventListener('change', e=>{
+  document.getElementById('wrap-m_holed').style.display = e.target.checked ? 'block':'none';
+  regenerate();
+});
+document.getElementById('b_type').addEventListener('change', e=>{
+  const isWave = e.target.value==='wave';
+  document.getElementById('wrap-b_amp').style.display = isWave ? 'block':'none';
+  document.getElementById('wrap-b_wl').style.display = isWave ? 'block':'none';
+  document.getElementById('wrap-b_gap').style.display = isWave ? 'none':'block';
+  regenerate();
+});
+document.getElementById('g_mode').addEventListener('change', e=>{
+  document.getElementById('wrap-g_angle').style.display = e.target.value==='linear' ? 'block':'none';
+  regenerate();
+});
+document.getElementById('i_mode').addEventListener('change', e=>{
+  const isStencil = e.target.value==='stencil';
+  document.getElementById('wrap-i_minmax').style.display = isStencil ? 'none':'flex';
+  document.getElementById('wrap-i_fixed').style.display = isStencil ? 'block':'none';
+  regenerate();
+});
+['m_motif','m_taper','m_outer','b_frame','p_frame','p_shape','p_stagger',
+ 'g_frame','g_shape','g_invert','g_stagger','m_alt',
+ 'i_frame','i_shape','i_invert','i_stagger','i_bg',
+ 'e_b_outer','e_p_frame'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', regenerate);
+});
+
+/* piezas estándar: tipo de pieza + toggles condicionales */
+document.getElementById('e_type').addEventListener('change', e=>{
+  document.getElementById('wrap-e-brida').style.display = e.target.value==='brida' ? 'block':'none';
+  document.getElementById('wrap-e-atiesador').style.display = e.target.value==='atiesador' ? 'block':'none';
+  document.getElementById('wrap-e-placa').style.display = e.target.value==='placa' ? 'block':'none';
+  regenerate();
+});
+document.getElementById('e_b_bore').addEventListener('change', e=>{
+  document.getElementById('wrap-e_b_bored').style.display = e.target.checked ? 'block':'none';
+  regenerate();
+});
+document.getElementById('e_a_holes').addEventListener('change', e=>{
+  document.getElementById('wrap-e_a_holefields').style.display = e.target.checked ? 'block':'none';
+  regenerate();
+});
+document.getElementById('e_p_extra').addEventListener('change', e=>{
+  document.getElementById('wrap-e_p_grid').style.display = e.target.checked ? 'flex':'none';
+  regenerate();
+});
+document.getElementById('e_p_center').addEventListener('change', e=>{
+  document.getElementById('wrap-e_p_cd').style.display = e.target.checked ? 'block':'none';
+  regenerate();
+});
+
+/* carga de imagen */
+document.getElementById('i_file').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(file) loadImageFile(file);
+});
+document.getElementById('i_matchaspect').addEventListener('click', ()=>{
+  if(!sourceImage){
+    document.getElementById('i_status').textContent = 'Primero carga una imagen.';
+    return;
+  }
+  const wEl = document.getElementById('i_w'), hEl = document.getElementById('i_h');
+  const newH = Math.round((+wEl.value) / sourceImage.aspect);
+  hEl.value = Math.min(+hEl.max, Math.max(+hEl.min, newH));
+  document.getElementById('v-i_h').value = hEl.value;
+  regenerate();
+});
+
+[
+ ['m_d',0],['m_ir',0],['m_holed',0],['m_rings',0],['m_n',0],['m_size',0],['m_aspect',0],
+ ['m_jangle',0],['m_jsize',0],['m_jrad',0],['m_skip',0],
+ ['b_w',0],['b_h',0],['b_margin',0],['b_cell',0],['b_gap',0],['b_amp',0],['b_wl',0],
+ ['b_jsize',0],['b_jpos',0],['b_skip',0],
+ ['p_w',0],['p_h',0],['p_margin',0],['p_size',0],['p_pitch',0],
+ ['p_jsize',0],['p_jpos',0],['p_skip',0],
+ ['g_w',0],['g_h',0],['g_margin',0],['g_angle',0],['g_pitch',0],['g_min',1],['g_max',1],['g_gamma',1],
+ ['g_jsize',0],['g_jpos',0],['g_skip',0],
+ ['i_w',0],['i_h',0],['i_margin',0],['i_pitch',1],['i_min',1],['i_max',1],['i_fixed',1],
+ ['i_threshold',0],['i_gamma',1],['i_jsize',0],['i_jpos',0],['i_skip',0],
+ ['e_b_od',0],['e_b_bored',0],['e_b_bcd',0],['e_b_n',0],['e_b_hd',0],['e_b_rot',0],
+ ['e_a_w',0],['e_a_h',0],['e_a_clipa',0],['e_a_clip2',0],['e_a_hn',0],['e_a_hd',0],['e_a_hedge',0],
+ ['e_p_w',0],['e_p_h',0],['e_p_corner',0],['e_p_edge',0],['e_p_hd',0],['e_p_nx',0],['e_p_ny',0],['e_p_cd',0],
+].forEach(([id,dec])=>bindRange(id,dec));
+
+/* semillas: campo escribible + dado */
+['m_seed','b_seed','p_seed','g_seed','i_seed'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', regenerate);
+});
+document.querySelectorAll('.dice').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const id = btn.dataset.seed;
+    document.getElementById(id).value = Math.floor(Math.random()*100000);
+    regenerate();
+  });
+});
+
+/* =========================================================
+   EXPORTAR / ALEATORIO
+   ========================================================= */
+document.getElementById('btn-export').addEventListener('click', ()=>{
+  const dxf = generateDXF(current.entities);
+  const blob = new Blob([dxf], {type:'application/dxf'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const estNames = {brida:'brida', atiesador:'atiesador', placa:'placa-base'};
+  const names = {mandala:'mandala', biombo:'biombo', perforado:'panel-perforado', gradiente:'panel-gradiente', imagen:'imagen-malla', estandar:estNames[document.getElementById('e_type').value]};
+  a.href = url;
+  a.download = `${names[activeTab]}_${current.bbox.w}x${current.bbox.h}mm.dxf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+function rand(min,max){ return min + Math.random()*(max-min); }
+function randInt(min,max){ return Math.round(rand(min,max)); }
+
+function refreshVal(id, decimals){
+  const range = document.getElementById(id);
+  const numEl = document.getElementById('v-'+id);
+  numEl.value = Number(range.value).toFixed(decimals);
+}
+
+document.getElementById('btn-random').addEventListener('click', ()=>{
+  if(activeTab==='mandala'){
+    document.getElementById('m_rings').value = randInt(2,8);
+    document.getElementById('m_n').value = randInt(6,36);
+    document.getElementById('m_motif').value = ['petal','diamond','gota','linea','arco'][randInt(0,4)];
+    document.getElementById('m_size').value = randInt(50,130);
+    document.getElementById('m_aspect').value = randInt(20,90);
+    document.getElementById('m_taper').value = ['none','out','in'][randInt(0,2)];
+    document.getElementById('m_alt').checked = Math.random()>0.4;
+    document.getElementById('m_jangle').value = randInt(0,12);
+    document.getElementById('m_jsize').value = randInt(0,25);
+    document.getElementById('m_jrad').value = randInt(0,10);
+    document.getElementById('m_skip').value = Math.random()>0.6 ? randInt(0,30) : 0;
+    document.getElementById('m_seed').value = randInt(1,99999);
+    ['m_rings','m_n','m_size','m_aspect','m_jangle','m_jsize','m_jrad','m_skip'].forEach(id=>refreshVal(id,0));
+  } else if(activeTab==='biombo'){
+    document.getElementById('b_type').value = ['hex','diamond','wave'][randInt(0,2)];
+    document.getElementById('b_type').dispatchEvent(new Event('change'));
+    document.getElementById('b_cell').value = randInt(25,90);
+    document.getElementById('b_gap').value = randInt(4,20);
+    document.getElementById('b_amp').value = randInt(5,40);
+    document.getElementById('b_wl').value = randInt(80,350);
+    document.getElementById('b_jsize').value = randInt(0,20);
+    document.getElementById('b_jpos').value = randInt(0,10);
+    document.getElementById('b_skip').value = Math.random()>0.6 ? randInt(0,25) : 0;
+    document.getElementById('b_seed').value = randInt(1,99999);
+    ['b_cell','b_gap','b_amp','b_wl','b_jsize','b_jpos','b_skip'].forEach(id=>refreshVal(id,0));
+  } else if(activeTab==='perforado'){
+    document.getElementById('p_shape').value = ['circle','square','diamond','hex'][randInt(0,3)];
+    document.getElementById('p_size').value = randInt(4,30);
+    document.getElementById('p_pitch').value = randInt(10,40);
+    document.getElementById('p_jsize').value = randInt(0,25);
+    document.getElementById('p_jpos').value = randInt(0,8);
+    document.getElementById('p_skip').value = Math.random()>0.6 ? randInt(0,25) : 0;
+    document.getElementById('p_seed').value = randInt(1,99999);
+    ['p_size','p_pitch','p_jsize','p_jpos','p_skip'].forEach(id=>refreshVal(id,0));
+  } else if(activeTab==='gradiente'){
+    document.getElementById('g_mode').value = ['linear','radial'][randInt(0,1)];
+    document.getElementById('g_mode').dispatchEvent(new Event('change'));
+    document.getElementById('g_shape').value = ['circle','square','diamond'][randInt(0,2)];
+    document.getElementById('g_angle').value = randInt(0,180);
+    document.getElementById('g_pitch').value = randInt(8,25);
+    document.getElementById('g_min').value = rand(0.5,4).toFixed(1);
+    document.getElementById('g_max').value = rand(8,25).toFixed(1);
+    document.getElementById('g_gamma').value = rand(0.5,2.2).toFixed(1);
+    document.getElementById('g_jsize').value = randInt(0,20);
+    document.getElementById('g_jpos').value = randInt(0,6);
+    document.getElementById('g_skip').value = Math.random()>0.6 ? randInt(0,20) : 0;
+    document.getElementById('g_seed').value = randInt(1,99999);
+    ['g_angle','g_pitch','g_jsize','g_jpos','g_skip'].forEach(id=>refreshVal(id,0));
+    refreshVal('g_min',1); refreshVal('g_max',1); refreshVal('g_gamma',1);
+  } else if(activeTab==='estandar'){
+    // piezas estándar: no aplica aleatoriedad, son cotas de fabricación
+    return;
+  } else {
+    // imagen: solo agita parámetros de conversión/ruido, nunca la imagen cargada
+    document.getElementById('i_pitch').value = rand(3,14).toFixed(1);
+    document.getElementById('i_gamma').value = rand(0.6,2).toFixed(1);
+    document.getElementById('i_threshold').value = randInt(30,70);
+    document.getElementById('i_jsize').value = randInt(0,20);
+    document.getElementById('i_jpos').value = randInt(0,6);
+    document.getElementById('i_skip').value = Math.random()>0.6 ? randInt(0,15) : 0;
+    document.getElementById('i_seed').value = randInt(1,99999);
+    ['i_pitch','i_gamma','i_threshold','i_jsize','i_jpos','i_skip'].forEach(id=>refreshVal(id, id==='i_pitch'||id==='i_gamma'?1:0));
+  }
+  regenerate();
+});
+
+/* init */
+resizeCanvas();
+regenerate();
+
+/* ---------- versiones ---------- */
+(function(){const L=CHANGELOG,lg=a=>a.map(e=>`<div class="vlg"><b>v${e.v}</b><time>${e.t}</time><ul>${e.c.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
+  const b=document.getElementById('vbadge');b.textContent='v'+L[0].v+' · '+L[0].t.slice(8,10)+'-'+L[0].t.slice(5,7)+' '+L[0].t.slice(11);
+  document.getElementById('vlogList').innerHTML=lg(L)+'<h4>DRAFT</h4><p style="font-size:11px;color:#6f8891">Su historial está en el botón de versión dentro de DRAFT.</p>';
+  const bg=document.getElementById('vlogBg');b.onclick=()=>bg.classList.add('on');document.getElementById('vlogX').onclick=()=>bg.classList.remove('on');bg.onclick=e=>{if(e.target===bg)bg.classList.remove('on');};})();
+</script>
+</body>
+</html>
