@@ -13,7 +13,7 @@ jobs:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.MI_TOKEN_GITHUB }} # Aquí usaremos el token que guardaste en Keep
+          token: ${{ secrets.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 }} # Aquí usaremos el token que guardaste en Keep
 
       - name: Sincronizar con Google Drive
         # Este es el espacio donde conectaremos tu carpeta de Drive usando credenciales de Google
