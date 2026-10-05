@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sorteador de Rifa · C.I.D.</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --casino-1:#ff3d14;
+    --casino-2:#e8410f;
+    --casino-3:#ff8a2b;
+    --casino-4:#8a1006;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    color:var(--text);
+    margin:0;
+    padding:32px 16px 48px;
+    text-align:center;
+  }
+  .shell{ max-width:720px; margin:0 auto; }
+
+  /* ---------- barra superior ---------- */
+  .top{
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
+    margin-bottom:18px; text-align:left;
+  }
+  .brand{ font-weight:800; letter-spacing:.18em; font-size:12px; color:var(--muted); text-transform:uppercase; }
+  .brand b{ color:var(--text); }
+  .sync{
+    display:flex; align-items:center; gap:8px;
+    font-size:12px; color:var(--muted);
+  }
+  .dot{ width:8px; height:8px; border-radius:50%; background:var(--muted2); flex:none; }
+  .dot.on{ background:#3fb68b; box-shadow:0 0 8px #3fb68b; }
+  .dot.pend{ background:#d9a441; box-shadow:0 0 8px #d9a441; }
+  .dot.err{ background:#e8410f; box-shadow:0 0 8px #e8410f; }
+
+  /* ---------- panel principal ---------- */
+  .panel{
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:28px 24px 30px;
+    box-shadow:0 18px 40px rgba(0,0,0,.35);
+  }
+  h1{
+    margin:0; font-size:13px; font-weight:700;
+    letter-spacing:.32em; text-transform:uppercase; color:var(--muted);
+  }
+  .rango{ margin:6px 0 0; font-size:12px; color:var(--muted2); letter-spacing:.12em; }
+
+  /* ---------- número ---------- */
+  .display{
+    position:relative;
+    margin:24px 0 14px;
+    min-height:170px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(11,17,26,.75);
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .display::before{
+    content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 2px, transparent 2px 4px);
+    pointer-events:none;
+  }
+  .numero{
+    font-family:'Montserrat',sans-serif;
+    font-weight:900;
+    font-size:clamp(84px, 22vw, 136px);
+    line-height:1;
+    color:var(--cid-blanco);
+    text-shadow:0 0 18px var(--accent), 0 0 42px var(--accent-glow);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:.02em;
+  }
+  .numero.rodando{ color:var(--muted); text-shadow:0 0 10px var(--accent-glow); filter:blur(.4px); }
+  .numero.gana{ animation:gana .9s ease-out; }
+  @keyframes gana{
+    0%{ transform:scale(.6); opacity:0; }
+    60%{ transform:scale(1.12); opacity:1; }
+    100%{ transform:scale(1); }
+  }
+
+  /* ---------- nombre ganador: letras CASINO ---------- */
+  .casino-wrap{
+    min-height:120px;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    margin:4px 0 18px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .casino-wrap.vacio{ cursor:default; }
+  .casino{
+    position:relative;
+    font-family:'Anton', 'Impact', sans-serif;
+    font-size:clamp(46px, 13vw, 92px);
+    line-height:.95;
+    text-transform:uppercase;
+    letter-spacing:.015em;
+    padding-top:.14em;      /* espacio para tildes: Á É Í Ó Ú Ñ */
+    color:transparent;
+    max-width:100%;
+    white-space:nowrap;
+    filter:drop-shadow(0 0 16px rgba(255,70,20,.35));
+  }
+  /* Dos mitades desfasadas = corte tipo tambor de tragamonedas */
+  .casino::before,
+  .casino::after{
+    content:attr(data-text);
+    position:absolute; inset:0;
+    padding-top:inherit;
+    background:linear-gradient(180deg, var(--casino-1) 0%, var(--casino-2) 45%, var(--casino-3) 72%, var(--casino-4) 100%);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent;
+  }
+  .casino::before{ clip-path:inset(0 0 46% 0); transform:translateY(-3px); }
+  .casino::after { clip-path:inset(56% 0 0 0); }
+  .casino-reflejo{
+    font-family:'Anton', 'Impact', sans-serif;
+    font-size:clamp(46px, 13vw, 92px);
+    line-height:.95;
+    text-transform:uppercase;
+    letter-spacing:.015em;
+    transform:scaleY(-1);
+    margin-top:2px;
+    max-width:100%;
+    white-space:nowrap;
+    background:linear-gradient(0deg, var(--casino-2) 0%, var(--casino-4) 60%);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent;
+    -webkit-mask-image:linear-gradient(0deg, rgba(0,0,0,.55) 0%, transparent 55%);
+            mask-image:linear-gradient(0deg, rgba(0,0,0,.55) 0%, transparent 55%);
+    height:.5em; overflow:hidden;
+    display:flex; align-items:flex-end; justify-content:center;
+    pointer-events:none;
+  }
+  .casino-wrap.entra .casino{ animation:entra .7s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes entra{
+    0%{ transform:translateY(40px); opacity:0; }
+    100%{ transform:none; opacity:1; }
+  }
+  .casino-hint{
+    font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted2);
+    margin-top:6px;
+  }
+  .casino-wrap.vacio .casino{ opacity:.18; }
+
+  /* ---------- botones ---------- */
+  .controls{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  button{
+    background:var(--cid-petroleo-br);
+    color:var(--cid-blanco);
+    border:1px solid rgba(255,255,255,.08);
+    padding:14px 26px;
+    font-size:15px; font-weight:700; letter-spacing:.06em;
+    border-radius:10px;
+    cursor:pointer;
+    transition:transform .15s ease, background .2s ease, opacity .2s;
+  }
+  button:hover:not(:disabled){ background:#1b88a3; transform:translateY(-2px); }
+  button:disabled{ opacity:.4; cursor:not-allowed; transform:none; }
+  .btn-stop{ background:#d9a441; color:#111827; }
+  .btn-stop:hover:not(:disabled){ background:#e8b555; }
+  .btn-sec{ background:transparent; border-color:var(--border); color:var(--muted); }
+  .btn-sec:hover:not(:disabled){ background:var(--cid-panel-soft); color:var(--text); }
+  .btn-sm{ padding:8px 14px; font-size:12px; border-radius:8px; }
+  .kbd{ font-size:11px; color:var(--muted2); margin-top:10px; letter-spacing:.08em; }
+
+  /* ---------- historial ---------- */
+  .history{ margin-top:30px; text-align:left; }
+  .history-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    border-bottom:1px solid var(--border); padding-bottom:10px;
+  }
+  .history h3{ margin:0; font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
+  .history h3 b{ color:var(--text); }
+  .progress{ height:3px; background:var(--border-soft); border-radius:3px; margin-top:10px; overflow:hidden; }
+  .progress i{ display:block; height:100%; width:0; background:var(--accent); transition:width .4s; }
+  .history-list{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .history-item{
+    display:flex; align-items:center; gap:12px;
+    background:rgba(11,17,26,.55);
+    border:1px solid var(--border-soft);
+    border-radius:8px;
+    padding:8px 12px;
+    cursor:pointer;
+    animation:popIn .3s ease-out;
+  }
+  .history-item:hover{ border-color:var(--border); }
+  .history-item .ord{ font-size:11px; color:var(--muted2); width:26px; }
+  .history-item .n{
+    font-weight:900; font-size:18px; min-width:46px; text-align:center;
+    color:var(--cid-blanco); background:var(--cid-petroleo); border-radius:6px; padding:2px 8px;
+    font-variant-numeric:tabular-nums;
+  }
+  .history-item .nom{
+    flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-family:'Anton','Impact',sans-serif; font-size:18px; letter-spacing:.03em; text-transform:uppercase;
+    color:var(--casino-2);
+  }
+  .history-item .nom.sin{ font-family:'Montserrat',sans-serif; font-size:12px; letter-spacing:.1em; color:var(--muted2); }
+  .history-item .hora{ font-size:11px; color:var(--muted2); }
+  .vacio-msg{ color:var(--muted2); font-size:13px; padding:10px 0; }
+  @keyframes popIn{ 0%{ transform:scale(.9); opacity:0; } 100%{ transform:none; opacity:1; } }
+
+  /* ---------- diálogo ---------- */
+  dialog{
+    background:var(--cid-negro); color:var(--text);
+    border:1px solid var(--border); border-radius:12px;
+    padding:22px; width:min(460px, calc(100vw - 32px));
+    text-align:left;
+  }
+  dialog::backdrop{ background:rgba(0,0,0,.6); backdrop-filter:blur(2px); }
+  dialog h4{ margin:0 0 12px; font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); }
+  dialog input, dialog textarea{
+    width:100%; background:var(--bg-input); color:var(--text);
+    border:1px solid var(--border); border-radius:8px;
+    padding:12px; font:inherit; font-size:15px;
+  }
+  dialog textarea{ min-height:220px; resize:vertical; font-family:ui-monospace,Menlo,monospace; font-size:13px; }
+  dialog .help{ font-size:12px; color:var(--muted); margin:8px 0 0; line-height:1.5; }
+  dialog .row{ display:flex; gap:10px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap; }
+
+  #aviso{
+    position:fixed; left:50%; bottom:20px; transform:translate(-50%, 20px);
+    background:var(--cid-negro); border:1px solid var(--border); color:var(--text);
+    padding:10px 16px; border-radius:8px; font-size:13px;
+    opacity:0; pointer-events:none; transition:.25s; z-index:10;
+    max-width:calc(100vw - 32px);
+  }
+  #aviso.on{ opacity:1; transform:translate(-50%, 0); }
+  #aviso.err{ border-color:#e8410f; }
+
+  @media (max-width:480px){
+    .panel{ padding:22px 16px 24px; }
+    button{ padding:13px 18px; }
+    .history-item .hora{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="top">
+    <div class="brand"><b>BASTIAN.XYZ</b> · C.I.D.</div>
+    <div class="sync">
+      <span class="dot" id="dotSync"></span>
+      <span id="txtSync">Solo local</span>
+      <button class="btn-sec btn-sm" id="btnDrive">Conectar Drive</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h1>Sorteador de Rifa</h1>
+    <p class="rango">Rango: 1 al <span id="lblTotal">200</span></p>
+
+    <div class="display"><div class="numero" id="display">--</div></div>
+
+    <div class="casino-wrap vacio" id="ganadorWrap" title="Toca para escribir el nombre del ganador">
+      <div class="casino" id="ganador" data-text="Ganador">Ganador</div>
+      <div class="casino-reflejo" id="ganadorReflejo">Ganador</div>
+      <div class="casino-hint" id="ganadorHint"></div>
+    </div>
+
+    <div class="controls">
+      <button id="drawBtn">Sortear Número</button>
+      <button id="stopBtn" class="btn-stop" disabled>Parar</button>
+    </div>
+    <div class="controls" style="margin-top:12px">
+      <button id="btnNombres" class="btn-sec btn-sm">Participantes</button>
+      <button id="btnExportar" class="btn-sec btn-sm">Exportar</button>
+      <button id="resetBtn" class="btn-sec btn-sm">Reiniciar</button>
+    </div>
+    <div class="kbd">Barra espaciadora: sortear / parar</div>
+
+    <div class="history">
+      <div class="history-head">
+        <h3>Sorteados <b id="count">0</b>/<span id="lblTotal2">200</span></h3>
+      </div>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlgNombre">
+  <h4>Nombre del ganador · Nº <span id="dlgNum"></span></h4>
+  <input id="inpNombre" maxlength="40" placeholder="Nombre y apellido" autocomplete="off">
+  <p class="help">Se guarda en la lista de participantes para este número.</p>
+  <div class="row">
+    <button class="btn-sec btn-sm" data-cerrar>Cancelar</button>
+    <button class="btn-sm" id="btnGuardarNombre">Guardar</button>
+  </div>
+</dialog>
+
+<dialog id="dlgLista">
+  <h4>Participantes</h4>
+  <textarea id="txtLista" placeholder="1 Juan Pérez&#10;2 María Soto&#10;17 - Pedro González"></textarea>
+  <p class="help">Un número y un nombre por línea. Cuando salga un número, su nombre aparece solo bajo el número sorteado.</p>
+  <div class="row">
+    <button class="btn-sec btn-sm" data-cerrar>Cancelar</button>
+    <button class="btn-sm" id="btnGuardarLista">Guardar lista</button>
+  </div>
+</dialog>
+
+<div id="aviso"></div>
+
+<script>
+/* ================= CONFIGURACIÓN (misma API que el HUB) ================= */
+const CFG = {
+  clientId: '427559577977-49j646lbo6ju5hmpo7i8nrvuletvqi4v.apps.googleusercontent.com',
+  carpeta:  '1ch8bQOoTYmJWVWShk0wXhmU5h2SJCizS',   // Drive › C.I.D.
+  archivo:  'rifa.json',
+  scope:    'https://www.googleapis.com/auth/drive openid email profile'
+};
+const TOTAL = 200;
+const LS_KEY = 'cid-rifa-v1';
+const API = 'https://www.googleapis.com/drive/v3';
+const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
+
+/* ================= UTILIDADES ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let avisoT;
+function aviso(t, err){ const a=$('#aviso'); a.textContent=t; a.className='on'+(err?' err':''); clearTimeout(avisoT); avisoT=setTimeout(()=>a.className='',3200); }
+const hora = s => new Date(s).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+/* Azar criptográfico: más justo que Math.random */
+function azar(n){
+  const max = Math.floor(0x100000000 / n) * n, b = new Uint32Array(1);
+  do{ crypto.getRandomValues(b); }while(b[0] >= max);
+  return b[0] % n;
+}
+
+/* ================= ESTADO ================= */
+function nuevo(){ return { v:1, total:TOTAL, sorteos:[], nombres:{}, actualizado:new Date().toISOString() }; }
+let S = nuevo();
+let sucio = false;          // hay cambios sin subir a Drive
+
+function disponibles(){
+  const ya = new Set(S.sorteos.map(x => x.n));
+  const out = [];
+  for(let i=1;i<=S.total;i++) if(!ya.has(i)) out.push(i);
+  return out;
+}
+function guardarLocal(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){}
+}
+function cargarLocal(){
+  try{
+    const d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    if(d && Array.isArray(d.sorteos)) S = Object.assign(nuevo(), d);
+  }catch(e){}
+}
+function marcarSucio(v){
+  sucio = v;
+  try{ localStorage.setItem(LS_KEY+'-pend', v ? '1' : ''); }catch(e){}
+}
+function cambio(){
+  S.actualizado = new Date().toISOString();
+  guardarLocal();
+  marcarSucio(true);
+  pintarSync();
+  subirPronto();
+}
+
+/* ================= SORTEO ================= */
+let rodando = false, frenando = false, rafId = null, t0 = 0, ultimoTick = 0, intervalo = 40;
+const DURACION = 5000;
+
+function sortear(){
+  if(rodando) return;
+  if(!disponibles().length){ aviso('¡Todos los números ya fueron sorteados!'); return; }
+  rodando = true; frenando = false;
+  t0 = performance.now(); ultimoTick = 0; intervalo = 40;
+  $('#drawBtn').disabled = true; $('#stopBtn').disabled = false;
+  $('#display').className = 'numero rodando';
+  mostrarGanador(null);
+  rafId = requestAnimationFrame(girar);
+}
+function girar(ts){
+  const pasado = ts - t0;
+  // Desacelera como un tambor: al parar (o al final) el intervalo crece
+  if(frenando || pasado > DURACION - 1200) intervalo = Math.min(intervalo * 1.09, 320);
+  if(ts - ultimoTick >= intervalo){
+    const d = disponibles();
+    $('#display').textContent = d[azar(d.length)];
+    ultimoTick = ts;
+  }
+  if(intervalo >= 320 || pasado > DURACION + 2000){ terminar(); return; }
+  rafId = requestAnimationFrame(girar);
+}
+function parar(){
+  if(!rodando || frenando) return;
+  frenando = true;
+  $('#stopBtn').disabled = true;
+}
+function terminar(){
+  cancelAnimationFrame(rafId);
+  rodando = false; frenando = false;
+  const d = disponibles();
+  const n = d[azar(d.length)];
+  S.sorteos.push({ n, t:new Date().toISOString() });
+  const el = $('#display');
+  el.textContent = n;
+  el.className = 'numero';
+  void el.offsetWidth; el.classList.add('gana');
+  mostrarGanador(n, true);
+  $('#stopBtn').disabled = true;
+  cambio();
+  pintar();
+}
+
+/* ================= NOMBRE GANADOR (letras casino) ================= */
+let numActual = null;
+function mostrarGanador(n, animar){
+  numActual = n;
+  const wrap = $('#ganadorWrap'), g = $('#ganador'), r = $('#ganadorReflejo'), h = $('#ganadorHint');
+  const nombre = n != null ? (S.nombres[n] || '') : '';
+  const txt = nombre || 'Ganador';
+  g.textContent = txt; g.dataset.text = txt; r.textContent = txt;
+  wrap.classList.toggle('vacio', !nombre);
+  h.textContent = n != null && !nombre ? 'Toca para escribir el nombre' : '';
+  wrap.style.cursor = n != null ? 'pointer' : 'default';
+  ajustar();
+  if(animar && nombre){ wrap.classList.remove('entra'); void wrap.offsetWidth; wrap.classList.add('entra'); }
+}
+/* Achica la letra hasta que el nombre entre en una línea */
+function ajustar(){
+  const g = $('#ganador'), r = $('#ganadorReflejo'), w = $('#ganadorWrap');
+  g.style.fontSize = r.style.fontSize = '';
+  let fs = parseFloat(getComputedStyle(g).fontSize);
+  while(g.scrollWidth > w.clientWidth && fs > 18){ fs -= 2; g.style.fontSize = r.style.fontSize = fs + 'px'; }
+}
+window.addEventListener('resize', ajustar);
+document.fonts?.ready.then(ajustar);
+
+function editarNombre(n){
+  if(n == null || rodando) return;
+  $('#dlgNum').textContent = n;
+  $('#inpNombre').value = S.nombres[n] || '';
+  $('#dlgNombre').dataset.n = n;
+  $('#dlgNombre').showModal();
+  $('#inpNombre').focus();
+}
+$('#btnGuardarNombre').onclick = () => {
+  const n = +$('#dlgNombre').dataset.n;
+  const v = $('#inpNombre').value.trim();
+  if(v) S.nombres[n] = v; else delete S.nombres[n];
+  $('#dlgNombre').close();
+  if(numActual === n) mostrarGanador(n, true);
+  cambio(); pintar();
+};
+$('#inpNombre').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); $('#btnGuardarNombre').click(); } });
+$('#ganadorWrap').onclick = () => editarNombre(numActual);
+
+/* ---------- lista de participantes ---------- */
+$('#btnNombres').onclick = () => {
+  $('#txtLista').value = Object.keys(S.nombres).map(Number).sort((a,b)=>a-b).map(k => `${k} ${S.nombres[k]}`).join('\n');
+  $('#dlgLista').showModal();
+};
+$('#btnGuardarLista').onclick = () => {
+  const out = {}; let malas = 0;
+  $('#txtLista').value.split('\n').forEach(l => {
+    if(!l.trim()) return;
+    const m = /^\s*(\d{1,4})\s*[-.:,;)\t ]\s*(.+?)\s*$/.exec(l);
+    if(m && +m[1] >= 1 && +m[1] <= S.total) out[+m[1]] = m[2].slice(0,40);
+    else malas++;
+  });
+  S.nombres = out;
+  $('#dlgLista').close();
+  if(numActual != null) mostrarGanador(numActual);
+  cambio(); pintar();
+  aviso(`${Object.keys(out).length} participantes guardados` + (malas ? ` · ${malas} líneas ignoradas` : ''), !!malas);
+};
+document.querySelectorAll('[data-cerrar]').forEach(b => b.onclick = () => b.closest('dialog').close());
+
+/* ================= PINTADO ================= */
+function pintar(){
+  const list = $('#historyList');
+  if(!S.sorteos.length){
+    list.innerHTML = '<div class="vacio-msg">Aún no hay números sorteados.</div>';
+  } else {
+    list.innerHTML = S.sorteos.map((x,i) => ({x,i})).reverse().map(({x,i}) => {
+      const nom = S.nombres[x.n];
+      return `<div class="history-item" data-n="${x.n}" title="Toca para editar el nombre">
+        <span class="ord">#${i+1}</span>
+        <span class="n">${x.n}</span>
+        <span class="nom${nom?'':' sin'}">${nom ? esc(nom) : 'Sin nombre'}</span>
+        <span class="hora">${x.t ? hora(x.t) : ''}</span>
+      </div>`;
+    }).join('');
+  }
+  $('#count').textContent = S.sorteos.length;
+  $('#lblTotal').textContent = $('#lblTotal2').textContent = S.total;
+  $('#bar').style.width = (S.sorteos.length / S.total * 100) + '%';
+  if(!rodando) $('#drawBtn').disabled = !disponibles().length;
+}
+$('#historyList').addEventListener('click', e => {
+  const it = e.target.closest('.history-item'); if(it) editarNombre(+it.dataset.n);
+});
+
+/* ================= REINICIAR / EXPORTAR ================= */
+$('#resetBtn').onclick = () => {
+  if(rodando) return;
+  if(!confirm('¿Reiniciar el sorteo? Se borra el historial de números (la lista de participantes se mantiene).')) return;
+  S.sorteos = [];
+  $('#display').textContent = '--'; $('#display').className = 'numero';
+  mostrarGanador(null);
+  cambio(); pintar();
+};
+$('#btnExportar').onclick = () => {
+  const filas = [['orden','numero','nombre','hora']].concat(
+    S.sorteos.map((x,i) => [i+1, x.n, S.nombres[x.n] || '', x.t || '']));
+  const csv = filas.map(f => f.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const url = URL.createObjectURL(new Blob(['﻿'+csv], {type:'text/csv'}));
+  const a = Object.assign(document.createElement('a'), {href:url, download:'rifa-resultados.csv'});
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+};
+
+/* ================= TECLADO ================= */
+document.addEventListener('keydown', e => {
+  if(e.code !== 'Space' || document.querySelector('dialog[open]')) return;
+  if(/INPUT|TEXTAREA|BUTTON/.test(document.activeElement?.tagName)) return;
+  e.preventDefault();
+  rodando ? parar() : sortear();
+});
+$('#drawBtn').onclick = sortear;
+$('#stopBtn').onclick = parar;
+
+/* ================= DRIVE · carpeta C.I.D. ================= */
+let token = null, tokenVence = 0, cliente = null, fileId = null, pendiente = null, subiendo = false, errDrive = '';
+const sesionOk = () => token && Date.now() < tokenVence;
+
+function pintarSync(){
+  const dot = $('#dotSync'), t = $('#txtSync'), b = $('#btnDrive');
+  dot.className = 'dot';
+  if(!sesionOk()){
+    t.textContent = sucio ? 'Guardado local · sin subir' : 'Solo local';
+    if(sucio) dot.classList.add('pend');
+    b.textContent = 'Conectar Drive'; b.style.display = '';
+    return;
+  }
+  b.style.display = 'none';
+  if(errDrive){ dot.classList.add('err'); t.textContent = 'Error Drive · reintentando'; }
+  else if(subiendo || sucio){ dot.classList.add('pend'); t.textContent = 'Guardando en C.I.D.…'; }
+  else { dot.classList.add('on'); t.textContent = 'Guardado en C.I.D. / ' + CFG.archivo; }
+}
+
+function iniciarCliente(){
+  if(cliente || !window.google?.accounts?.oauth2) return !!cliente;
+  cliente = google.accounts.oauth2.initTokenClient({
+    client_id: CFG.clientId, scope: CFG.scope,
+    callback: async r => {
+      if(r.error){ aviso('No se pudo iniciar sesión', true); return; }
+      token = r.access_token; tokenVence = Date.now() + (r.expires_in - 60) * 1000;
+      pintarSync();
+      await alConectar();
+      if(pendiente){ const p = pendiente; pendiente = null; p(); }
+    },
+    error_callback: e => { if(e.type !== 'popup_closed') aviso('Inicio de sesión cancelado', true); }
+  });
+  return true;
+}
+function entrar(despues){
+  if(!iniciarCliente()){ aviso('Cargando Google… intenta de nuevo', true); return; }
+  pendiente = despues || null;
+  cliente.requestAccessToken({prompt: token ? '' : 'select_account'});
+}
+$('#btnDrive').onclick = () => entrar();
+
+async function api(url, opt={}){
+  if(!sesionOk()){ token = null; throw new Error('sesion'); }
+  const r = await fetch(url, {...opt, headers:{...(opt.headers||{}), Authorization:'Bearer '+token}});
+  if(r.status === 401){ token = null; throw new Error('sesion'); }
+  if(!r.ok){ let m = r.status; try{ m = (await r.json()).error.message; }catch(e){} throw new Error(m); }
+  return r;
+}
+
+async function driveLeer(){
+  const q = encodeURIComponent(`name='${CFG.archivo}' and '${CFG.carpeta}' in parents and trashed=false`);
+  const j = await (await api(`${API}/files?q=${q}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true`)).json();
+  if(!j.files || !j.files.length){ fileId = null; return null; }
+  fileId = j.files[0].id;
+  return await (await api(`${API}/files/${fileId}?alt=media&supportsAllDrives=true`)).json();
+}
+async function driveGuardar(){
+  const body = JSON.stringify(S, null, 1);
+  if(fileId){
+    await api(`${UPLOAD}/${fileId}?uploadType=media&supportsAllDrives=true`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body});
+  } else {
+    const fd = new FormData();
+    fd.append('metadata', new Blob([JSON.stringify({name:CFG.archivo, parents:[CFG.carpeta], mimeType:'application/json'})], {type:'application/json'}));
+    fd.append('file', new Blob([body], {type:'application/json'}));
+    fileId = (await (await api(`${UPLOAD}?uploadType=multipart&supportsAllDrives=true&fields=id`, {method:'POST', body:fd})).json()).id;
+  }
+}
+
+/* Al conectar: decide entre lo local y lo que hay en Drive */
+async function alConectar(){
+  try{
+    const remoto = await driveLeer();
+    const tieneLocal = S.sorteos.length || Object.keys(S.nombres).length;
+    if(remoto && Array.isArray(remoto.sorteos)){
+      const igual = JSON.stringify(remoto.sorteos) === JSON.stringify(S.sorteos) &&
+                    JSON.stringify(remoto.nombres||{}) === JSON.stringify(S.nombres);
+      if(!igual){
+        const usarDrive = !tieneLocal || confirm(
+          `En Drive hay una rifa con ${remoto.sorteos.length} números sorteados (${new Date(remoto.actualizado).toLocaleString('es-CL')}).\n\n` +
+          `Aceptar: cargar la de Drive.\nCancelar: mantener la de este equipo (${S.sorteos.length} sorteados) y subirla.`);
+        if(usarDrive){
+          S = Object.assign(nuevo(), remoto);
+          guardarLocal(); marcarSucio(false);
+          $('#display').textContent = S.sorteos.length ? S.sorteos[S.sorteos.length-1].n : '--';
+          mostrarGanador(S.sorteos.length ? S.sorteos[S.sorteos.length-1].n : null);
+          pintar();
+        } else marcarSucio(true);
+      } else marcarSucio(false);
+    } else if(tieneLocal) marcarSucio(true);
+    aviso('Conectado a Drive · C.I.D.');
+    if(sucio) await subir();
+  }catch(e){
+    errDrive = e.message === 'sesion' ? '' : e.message;
+    aviso(e.message === 'sesion' ? 'La sesión venció, conecta de nuevo' : 'No se pudo leer Drive: ' + e.message, true);
+  }
+  pintarSync();
+}
+
+let subirT = null;
+function subirPronto(){ clearTimeout(subirT); subirT = setTimeout(subir, 600); }
+async function subir(){
+  if(!sucio || !sesionOk()){ pintarSync(); return; }
+  if(subiendo){ subirPronto(); return; }
+  subiendo = true; pintarSync();
+  try{
+    await driveGuardar();
+    marcarSucio(false); errDrive = '';
+  }catch(e){
+    if(e.message === 'sesion') aviso('La sesión de Drive venció · queda guardado local', true);
+    else { errDrive = e.message; setTimeout(subir, 5000); }
+  }
+  subiendo = false; pintarSync();
+}
+window.addEventListener('beforeunload', e => { if(sucio && sesionOk()){ e.preventDefault(); e.returnValue = ''; } });
+
+/* ================= INICIO ================= */
+cargarLocal();
+pintar();
+if(S.sorteos.length){
+  const u = S.sorteos[S.sorteos.length-1].n;
+  $('#display').textContent = u;
+  mostrarGanador(u);
+}
+try{ sucio = !!localStorage.getItem(LS_KEY+'-pend'); }catch(e){}
+pintarSync();
+</script>
+</body>
+</html>

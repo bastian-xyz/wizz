@@ -24,7 +24,8 @@ const DB = {
     { id: "TB-004", nombre: "NIMF Cotizador",    archivo: "../nimf-cotizador.html",    estado: "listo",     desc: "Cotizador NIMF." },
     { id: "TB-005", nombre: "Laser Fibra",       archivo: "../laser-fibra.html",       estado: "listo",     desc: "Cálculo / parámetros de corte fibra." },
     { id: "TB-006", nombre: "Cotiz Letras",      archivo: "../cotiz-letras.html",      estado: "listo",     desc: "Cotizador de letras corpóreas." },
-    { id: "TB-007", nombre: "Apex Bicycle Lab",  archivo: "../apex-bicycle-lab.html",  estado: "listo",     desc: "Laboratorio Apex." }
+    { id: "TB-007", nombre: "Apex Bicycle Lab",  archivo: "../apex-bicycle-lab.html",  estado: "listo",     desc: "Laboratorio Apex." },
+    { id: "TB-008", nombre: "Sorteador de Rifa", archivo: "../rifa.html",              estado: "listo",     desc: "Sorteo 1-200 con nombre del ganador; guarda en Drive › C.I.D." }
   ],
 
   /* ---------------------------------------------------------
