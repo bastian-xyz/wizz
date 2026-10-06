@@ -1,0 +1,54 @@
+name: Sincronización Privada Drive a GitHub
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+
+jobs:
+  sync-drive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Instalar rclone
+        run: sudo -v ; curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configurar credenciales seguras
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "$GCP_CREDENTIALS" > /tmp/sa.json
+
+          cat <<EOF > ~/.config/rclone/rclone.conf
+          [mi_drive_cid]
+          type = drive
+          service_account_file = /tmp/sa.json
+          EOF
+
+      - name: Descargar archivos desde Drive
+        run: |
+          # Respaldar .git
+          mv .git .git.backup
+
+          # Sincronizar desde Drive
+          rclone sync mi_drive_cid:/ ./ -v
+
+          # Restaurar .git
+          rm -rf .git 2>/dev/null || true
+          mv .git.backup .git
+
+          rm /tmp/sa.json
+
+      - name: Guardar y actualizar la página web
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Sincronización automática de código desde Drive" || echo "No hay cambios nuevos para subir"
+          git push
