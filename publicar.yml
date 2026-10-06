@@ -1,0 +1,47 @@
+# Publica en GitHub Pages SOLO la versión indicada en ACTIVA.txt
+# (las demás quedan guardadas en versiones/ como historial y respaldo).
+name: Publicar versión activa
+
+on:
+  push:
+    branches: [main]
+    paths: ['ACTIVA.txt', 'versiones/**', '.github/workflows/publicar.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar la versión activa
+        run: |
+          V=$(tr -d ' \r\n\t' < ACTIVA.txt)
+          echo "Versión activa: $V"
+          if [ ! -d "versiones/$V" ]; then echo "::error::No existe la carpeta versiones/$V"; exit 1; fi
+          if [ ! -f "versiones/$V/index.html" ]; then echo "::error::versiones/$V no tiene index.html"; exit 1; fi
+          mkdir -p _sitio
+          cp -r "versiones/$V/." _sitio/
+          echo "$V" > _sitio/version.txt
+          ls -la _sitio
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _sitio
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
