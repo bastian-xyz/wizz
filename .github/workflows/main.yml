@@ -1,9 +1,9 @@
 name: Sincronización Privada Drive a GitHub
 
 on:
-  workflow_dispatch: # Botón manual
+  workflow_dispatch:
   schedule:
-    - cron: '0 * * * *' # Automático cada hora
+    - cron: '0 * * * *'
 
 jobs:
   sync-drive:
@@ -13,35 +13,27 @@ jobs:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }} # Usamos el token por defecto de GitHub
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Instalar rclone
-        # Rclone es la herramienta que nos permite descargar desde Drive por terminal
         run: sudo -v ; curl https://rclone.org/install.sh | sudo bash
 
       - name: Configurar credenciales seguras
-        # Llamamos al secreto que guardaste en el Paso A
         env:
           GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
         run: |
           mkdir -p ~/.config/rclone
           echo "$GCP_CREDENTIALS" > /tmp/sa.json
           
-          # Creamos el puente apuntando a Google Drive
           cat <<EOF > ~/.config/rclone/rclone.conf
           [mi_drive_cid]
           type = drive
-          scope = drive.readonly
           service_account_file = /tmp/sa.json
           EOF
 
       - name: Descargar archivos desde Drive
         run: |
-          # Sincronizamos la carpeta específica (usando tu ID de carpeta)
-          # Los archivos se descargarán en la raíz de tu repositorio
-          rclone sync mi_drive_cid./
-          
-          # Borramos la llave temporal por seguridad
+          rclone sync mi_drive_cid:/ ./
           rm /tmp/sa.json
 
       - name: Guardar y actualizar la página web
@@ -51,4 +43,3 @@ jobs:
           git add .
           git commit -m "Sincronización automática de código desde Drive" || echo "No hay cambios nuevos para subir"
           git push
-          
