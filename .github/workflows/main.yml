@@ -31,10 +31,12 @@ jobs:
           service_account_file = /tmp/sa.json
           EOF
 
-      - name: Descargar archivos desde Drive
-      run: |
-      rclone sync mi_drive_cid:/ ./ --exclude ".git/**" --exclude ".github/**"
-      rm /tmp/sa.json
+     - name: Descargar archivos desde Drive
+  run: |
+    mkdir -p /tmp/drive_sync
+    rclone sync mi_drive_cid:/ /tmp/drive_sync -v
+    rsync -av --exclude='.git' --exclude='.github' /tmp/drive_sync/ ./
+    rm /tmp/sa.json
       
       - name: Guardar y actualizar la página web
         run: |
