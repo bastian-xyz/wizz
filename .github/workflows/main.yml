@@ -33,9 +33,16 @@ jobs:
 
      - name: Descargar archivos desde Drive
   run: |
-    mkdir -p /tmp/drive_sync
-    rclone sync mi_drive_cid:/ /tmp/drive_sync -v
-    rsync -av --exclude='.git' --exclude='.github' /tmp/drive_sync/ ./
+    # Respaldar .git
+    mv .git .git.backup
+    
+    # Sincronizar
+    rclone sync mi_drive_cid:/ ./ -v
+    
+    # Restaurar .git
+    rm -rf .git 2>/dev/null || true
+    mv .git.backup .git
+    
     rm /tmp/sa.json
       
       - name: Guardar y actualizar la página web
