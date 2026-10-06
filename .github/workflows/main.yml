@@ -32,10 +32,10 @@ jobs:
           EOF
 
       - name: Descargar archivos desde Drive
-        run: |
-          rclone sync mi_drive_cid:/ ./
-          rm /tmp/sa.json
-
+      run: |
+      rclone sync mi_drive_cid:/ ./ --exclude ".git/**" --exclude ".github/**"
+      rm /tmp/sa.json
+      
       - name: Guardar y actualizar la página web
         run: |
           git config --global user.name "github-actions[bot]"
