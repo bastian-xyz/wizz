@@ -22,10 +22,10 @@ jobs:
       - name: Configurar credenciales seguras
         # Llamamos al secreto que guardaste en el Paso A
         env:
-          GCP\_CREDENTIALS: ${{ secrets.GCP\_CREDENTIALS }}
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
         run: |
           mkdir -p ~/.config/rclone
-          echo "$GCP\_CREDENTIALS" > /tmp/sa.json
+          echo "$GCP_CREDENTIALS" > /tmp/sa.json
           
           # Creamos el puente apuntando a Google Drive
           cat <<EOF > ~/.config/rclone/rclone.conf
