@@ -39,7 +39,7 @@ jobs:
         run: |
           # Sincronizamos la carpeta específica (usando tu ID de carpeta)
           # Los archivos se descargarán en la raíz de tu repositorio
-          rclone sync mi_drive_cid:1WCSK9XKiKFDtScmZGiEVdi4Ca7obRasi ./ --drive-root-folder-id 1WCSK9XKiKFDtScmZGiEVdi4Ca7obRasi -v --exclude ".git/**" --exclude ".github/**"
+          rclone sync mi_drive_cid./
           
           # Borramos la llave temporal por seguridad
           rm /tmp/sa.json
