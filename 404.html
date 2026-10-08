@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d10">
+<title>(X,Y,Z) · C.I.D.</title>
+<base href="/wizz/">
+<link rel="preload" as="image" href="portada.jpg">
+<style>
+  :root{--fondo:#0a0d10;--cian:#4fd8e8;--rojo:#ff5a6a;--plata:#9aa6b2}
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%;background:var(--fondo);color:#e6eef3;font-family:'Montserrat',system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden}
+  .portada{position:fixed;inset:0;background:var(--fondo) url(portada.jpg) center 42%/cover no-repeat;animation:entra 1.2s ease-out both}
+  .portada::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 35%,rgba(10,13,16,.55) 100%),linear-gradient(to top,rgba(10,13,16,.92) 0,rgba(10,13,16,0) 34%)}
+  @keyframes entra{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:none}}
+  .pie{position:fixed;left:0;right:0;bottom:0;padding:0 20px calc(26px + env(safe-area-inset-bottom));display:grid;justify-items:center;gap:10px;text-align:center}
+  .marca{font-weight:800;letter-spacing:.32em;font-size:clamp(13px,2.4vw,17px)}
+  .marca b{color:var(--cian);font-weight:800}
+  .sub{font-size:10px;letter-spacing:.28em;color:var(--plata);text-transform:uppercase}
+  .barra{width:min(260px,62vw);height:2px;background:rgba(154,166,178,.18);border-radius:2px;overflow:hidden;margin-top:4px}
+  .barra i{display:block;height:100%;width:40%;background:linear-gradient(90deg,var(--cian),var(--rojo));animation:corre 1.3s ease-in-out infinite}
+  @keyframes corre{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+  .estado{font-size:11px;color:var(--plata);letter-spacing:.06em;min-height:1.4em}
+  .btn{display:none;margin-top:4px;padding:10px 18px;border:1px solid var(--cian);border-radius:4px;color:#e6eef3;background:rgba(79,216,232,.08);font:700 10px/1 inherit;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+  .btn:hover{background:rgba(79,216,232,.18)}
+  .falla .barra{display:none}.falla .btn{display:inline-block}
+  @media (prefers-reduced-motion:reduce){.portada,.barra i{animation:none}}
+</style>
+</head>
+<body>
+<div class="portada" role="img" aria-label="Portada (X,Y,Z) · C.I.D."></div>
+<div class="pie" id="pie">
+  <div class="marca">(X,Y,Z) <b>·</b> C.I.D.</div>
+  <div class="sub">Central de Implementación y Desarrollo</div>
+  <div class="barra"><i></i></div>
+  <div class="estado" id="estado">Abriendo…</div>
+  <a class="btn" id="btn" href="./">Reintentar</a>
+</div>
+<script>
+// Pantalla de respaldo: si el sitio muestra la raíz del repositorio (y no la app), busca la versión activa y la abre.
+(async () => {
+  const est = document.getElementById('estado'), pie = document.getElementById('pie');
+  const falla = t => { est.textContent = t; pie.classList.add('falla'); };
+  try{
+    const r = await fetch('ACTIVA.txt?' + Date.now(), {cache:'no-store'});
+    if(!r.ok) throw 0;
+    const v = (await r.text()).trim();
+    if(!/^[\w.\-]+$/.test(v)) throw 0;
+    est.textContent = 'Abriendo XYZ·MAKER ' + v + '…';
+    const dest = 'versiones/' + v + '/';
+    const ok = await fetch(dest + 'index.html', {method:'HEAD', cache:'no-store'}).then(x => x.ok).catch(() => false);
+    if(!ok){ falla('No se encontró la carpeta de la versión ' + v + '.'); return; }
+    setTimeout(() => location.replace(dest + location.hash), 900);
+  }catch(e){ falla('Sin conexión o sin versión activa. Vuelve a intentar en un momento.'); }
+})();
+</script>
+</body>
+</html>
