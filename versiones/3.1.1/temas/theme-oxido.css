@@ -1,0 +1,134 @@
+/* theme.css · paleta Óxido: Rojo óxido y coral. */
+/* =========================================
+   theme.css - BASTIAN.XYZ C.I.D. MASTER THEME
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap');
+
+:root{--cid-negro:#1c0e0e;--cid-negro-rgb:28,14,14;--cid-f0:#0c0606;--cid-f0-rgb:12,6,6;--cid-f1:#130a0a;--cid-f1-rgb:19,10,10;--cid-pet:#641c18;--cid-pet-rgb:100,28,24;--cid-br:#a83228;--cid-br-rgb:168,50,40;--cid-ac:#f57a66;--cid-ac-rgb:245,122,102;--cid-cl:#ffa28e;--cid-cl-rgb:255,162,142;--cid-cian:#ff604c;--cid-cian-rgb:255,96,76;--cid-plata:#b09694;--cid-plata-rgb:176,150,148;--cid-blanco:#fff6f4;--cid-blanco-rgb:255,246,244;--carga-a:var(--cid-br);--carga-b:var(--cid-cl)}
+:root {
+  /* PALETA MAESTRA C.I.D. */
+  
+  --cid-panel: rgba(var(--cid-negro-rgb), 0.70);
+  --cid-panel-soft: rgba(var(--cid-pet-rgb), 0.20);
+  --cid-petroleo: var(--cid-pet);
+  --cid-petroleo-br: var(--cid-br);
+  
+  
+  --cid-border: rgba(var(--cid-plata-rgb), 0.25);
+
+  /* 1. MAPPING GENERAL (Variables compartidas en tus herramientas) */
+  --bg: var(--cid-negro);
+  --bg-base: var(--cid-negro);
+  --bg2: var(--cid-panel-soft);
+  --surface: var(--cid-panel);
+  --surface2: var(--cid-panel-soft);
+  --panel: var(--cid-panel);
+  --panel-2: var(--cid-panel-soft);
+  --bg-panel: var(--cid-panel);
+  --bg-input: rgba(var(--cid-f1-rgb), 0.6);
+
+  --border: var(--cid-border);
+  --border-soft: rgba(var(--cid-plata-rgb), 0.1);
+  --line: var(--cid-border);
+  --panel-line: var(--cid-border);
+
+  --text: var(--cid-blanco);
+  --text-main: var(--cid-blanco);
+  --muted: var(--cid-plata);
+  --text-muted: var(--cid-plata);
+  --muted2: rgba(var(--cid-plata-rgb), 0.5);
+  --text-dim: var(--cid-plata);
+
+  /* 2. OVERRIDE DE COLORES DE ACENTO (Unificando a tonos petróleo/plata) */
+  --brass: var(--cid-petroleo-br);
+  --brass-dim: var(--cid-petroleo);
+  --amber: var(--cid-petroleo-br);
+  --amber-dim: var(--cid-petroleo);
+  --cyan: var(--cid-plata); 
+  --cyan-dim: rgba(var(--cid-plata-rgb),.3);
+  --accent: var(--cid-petroleo-br);
+  --accent-dim: var(--cid-petroleo);
+  --amber-glow: rgba(var(--cid-pet-rgb), 0.25);
+  --accent-glow: rgba(var(--cid-br-rgb), 0.25);
+  --grid-minor: rgba(var(--cid-pet-rgb), 0.42);
+  --grid-major: rgba(var(--cid-pet-rgb), 0.78);
+}
+
+/* 3. FONDO GLOBAL (LA MALLA TÉCNICA C.I.D.) */
+body {
+  background-color: var(--cid-negro) !important;
+  background-image:
+    linear-gradient(rgba(var(--cid-pet-rgb),.42) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--cid-pet-rgb),.42) 1px, transparent 1px),
+    linear-gradient(rgba(var(--cid-pet-rgb),.78) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--cid-pet-rgb),.78) 1px, transparent 1px) !important;
+  background-size: 8px 8px, 8px 8px, 40px 40px, 40px 40px !important;
+  background-attachment: fixed !important;
+  font-family: 'Montserrat', sans-serif !important;
+  position: relative;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+}
+
+body::before {
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse at 50% 46%, transparent 35%, rgba(0,0,0,.65) 100%);
+}
+
+body::after {
+  top: -20px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  opacity: 0.7;
+  z-index: 3;
+  background: linear-gradient(90deg, transparent, rgba(var(--cid-plata-rgb),.45), transparent);
+  animation: cid-scan 8s linear infinite;
+}
+
+@keyframes cid-scan {
+  0% { transform: translateY(-12px); opacity: 0; }
+  15% { opacity: 0.8; }
+  100% { transform: translateY(100vh); opacity: 0.2; }
+}
+
+html, body {
+  min-height: 100%;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Limpiar gradientes sólidos de algunas herramientas para que se vea la malla */
+.main, .workspace, .layout {
+  background: transparent !important;
+}
+
+/* 4. EFECTO CRISTAL (GLASSMORPHISM) PARA PANELES */
+.card, .panel, .control-section,
+.sidebar, .footer, .hud-corner, #textPanel, #layersPanel,
+.score-card, .analysis-card, .big-line, .preview {
+  background-color: var(--cid-panel) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-color: var(--cid-border) !important;
+}
+
+header {
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 5. TIPOGRAFÍA EN BOTONES Y TÍTULOS */
+h1, h2, h3, button, .brand, .tab, .toggle {
+  font-family: 'Montserrat', sans-serif !important;
+}
